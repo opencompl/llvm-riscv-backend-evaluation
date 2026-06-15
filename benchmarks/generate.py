@@ -5,7 +5,7 @@
 # dependencies = ["xdsl"]
 #
 # [tool.uv.sources]
-# xdsl = { git = "https://github.com/luisacicolini/xdsl.git", rev = "5e00c8487235fb56db9183bc3434b44baa4151cf" }
+# xdsl = { path = "../xdsl" }
 # ///
 
 
@@ -34,10 +34,8 @@ LLVM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM/"
 LLVMIR_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
 )
-MLIR_bb0_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0/"
-)
-MLIR_bb0_veIR_DIR_PATH = (
+
+MLIR_bb0_VEIR_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veIR/"
 )
 MLIR_single_DIR_PATH = (
@@ -47,46 +45,37 @@ MLIR_multi_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/MLIR_multi/"
 )
 isolated_instructions_DIR_PATH = f"{ROOT_DIR_PATH}/compare-lowering-patterns/isolated_instructions/"
+
 LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_selectiondag/"
+
 LLC_ASM_globalisel_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_globalisel/"
 )
 VEIR_ASM_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM/"
 )
-VEIR_ASM_opt_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM_opt/"
-)
+
 XDSL_ASM_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/XDSL_ASM/"
 )
-XDSL_opt_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/XDSL_opt_ASM/"
-)
+
 XDSL_FUNC_ASM_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/XDSL_FUNC/"
 )
-XDSL_FUNC_opt_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/XDSL_FUNC_opt/"
-)
+
 LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/logs/"
 
 
 AUTOGEN_DIR_PATHS = [
     LLVM_DIR_PATH,
     LLVMIR_DIR_PATH,
-    MLIR_bb0_DIR_PATH,
-    MLIR_bb0_veIR_DIR_PATH,
-    MLIR_single_DIR_PATH,
+    MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
-    # XDSL_FUNC_ASM_DIR_PATH,
-    XDSL_FUNC_opt_ASM_DIR_PATH,
+    XDSL_FUNC_ASM_DIR_PATH,
     VEIR_ASM_DIR_PATH,
-    # XDSL_ASM_DIR_PATH,
+    XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
-    # VEIR_ASM_opt_DIR_PATH,
-    XDSL_opt_ASM_DIR_PATH,
 ]
 
 
@@ -236,58 +225,80 @@ def LLC_compile_riscv_globalisel(input_file, output_file, log_file, pass_dict, o
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
 
+def _parse_arg_types(bb0_line):
+    """Extract argument types from a ^bb0(%arg0: type, ...) line."""
+    m = re.match(r'\^bb0\((.*)\)\s*:', bb0_line)
+    if not m or not m.group(1).strip():
+        return []
+    types = []
+    depth = 0
+    current = ""
+    for ch in m.group(1):
+        if ch in "<({":
+            depth += 1
+            current += ch
+        elif ch in ">)}":
+            depth -= 1
+            current += ch
+        elif ch == "," and depth == 0:
+            if ":" in current:
+                types.append(current.split(":", 1)[1].strip())
+            current = ""
+        else:
+            current += ch
+    if current.strip() and ":" in current:
+        types.append(current.split(":", 1)[1].strip())
+    return types
 
-def extract_bb0(input_file, output_file, log_file):
-    """
-    Extract the first basic block from the MLIR file.
-    """
-    o_f = open(output_file, "w")
-    in_block = False
-    try:
-        with open(input_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if "^bb0(" in line:
-                    in_block = True
-                    o_f.write("{\n")
-                    o_f.write(line + "\n")
-                    continue
-                if in_block:
-                    o_f.write(line + "\n")
-                    if '"llvm.return"' in line:
-                        o_f.write("}" + "\n")
-                        o_f.close()
-                        return
 
-    except FileNotFoundError:
-        print(f"Error: The file '{input_file}' was not found.", file=log_file)
-        sys.exit(1)
+def _parse_return_type(llvm_return_line):
+    """Extract the function return type from an 'llvm.return' line."""
+    m = re.search(r':\s*\(([^)]*)\)\s*->', llvm_return_line)
+    if m and m.group(1).strip():
+        return m.group(1).strip()
+    return "()"
+
 
 def extract_bb0_veIR(input_file, output_file, log_file):
     """
-    Extract the first basic block from the MLIR file, print it in a `buildin.module`. 
+    Extract the first basic block from the MLIR file, wrap it in a func.func
+    inside a builtin.module.
     """
-    o_f = open(output_file, "w")
-    o_f.write("\"builtin.module\"() ({\n")
     in_block = False
+    bb0_line = None
+    block_lines = []
+
     try:
         with open(input_file, "r") as f:
             for line in f:
                 line = line.strip()
                 if "^bb0(" in line:
                     in_block = True
-                    o_f.write("\t" + line + "\n")
+                    bb0_line = line
                     continue
                 if in_block:
-                    o_f.write("\t" + line + "\n")
-                    if '"llvm.return"' in line:
-                        o_f.write("}) : () -> ()\n")
-                        o_f.close()
-                        return
-
+                    line = line.replace('"llvm.return"', '"func.return"')
+                    block_lines.append(line)
+                    if '"func.return"' in line:
+                        break
     except FileNotFoundError:
         print(f"Error: The file '{input_file}' was not found.", file=log_file)
         sys.exit(1)
+
+    if bb0_line is None:
+        return
+
+    ret_type = _parse_return_type(block_lines[-1]) if block_lines else "()"
+    func_type = f"() -> {ret_type}"
+
+    with open(output_file, "w") as o_f:
+        o_f.write('"builtin.module"() ({\n')
+        o_f.write(f'  "func.func"() <{{sym_name = "func0", function_type = {func_type}}}> ({{\n')
+        o_f.write(f'  {bb0_line}\n')
+        for l in block_lines:
+            o_f.write(f'    {l}\n')
+        o_f.write('  }): () -> ()\n')
+        o_f.write('}) : () -> ()\n')
 
 
 def LAKE_compile_riscv64(jobs, pass_dict):
@@ -297,12 +308,12 @@ def LAKE_compile_riscv64(jobs, pass_dict):
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
         futures = {}
 
-        for filename in os.listdir(MLIR_bb0_DIR_PATH):
-            input_file = os.path.join(MLIR_bb0_DIR_PATH, filename)
+        for filename in os.listdir(MLIR_bb0_VEIR_DIR_PATH):
+            input_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename)
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
-            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=isel-riscv64 "
+            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-riscv64,reconcile-cast\" "
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
             futures[future] = output_file
@@ -481,12 +492,10 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     for filename in os.listdir(LLVM_DIR_PATH):
         input_file = os.path.join(LLVM_DIR_PATH, filename)
         basename, _ = os.path.splitext(filename)
-        output_file = os.path.join(MLIR_bb0_DIR_PATH, basename + ".mlir")
-        output_file_veIR = os.path.join(MLIR_bb0_veIR_DIR_PATH, basename + ".mlir")
+        output_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, basename + ".mlir")
         log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_bb0_extract.log"), "w")
         log_file_veIR = open(os.path.join(LOGS_DIR_PATH, basename + "_bb0_extract_veIR.log"), "w")
-        extract_bb0(input_file, output_file, log_file)
-        extract_bb0_veIR(input_file, output_file_veIR, log_file_veIR)
+        extract_bb0_veIR(input_file, output_file, log_file_veIR)
         idx += 1
         percentage = (float(idx) / float(len(os.listdir(LLVM_DIR_PATH)))) * 100
         print(f"extracting the first basic block: {percentage:.2f}%")
@@ -520,11 +529,11 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     XDSL_create_func_file2ret_opt = dict()
     idx = 0
     # Create `func.func`
-    for filename in os.listdir(VEIR_ASM_opt_DIR_PATH):
-        input_file = os.path.join(MLIR_bb0_veIR_DIR_PATH, filename)
+    for filename in os.listdir(VEIR_ASM_DIR_PATH):
+        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         if LAKE_file2ret_opt[input_file] == 0:
             basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(XDSL_FUNC_opt_ASM_DIR_PATH, basename + ".mlir")
+            output_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_xdsl_create_func_opt.log"), "w"
             )
@@ -554,11 +563,11 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     XDSL_reg_alloc_file2ret_opt = dict()
     idx = 0
     # Register allocation with XDSL
-    for filename in os.listdir(XDSL_FUNC_opt_ASM_DIR_PATH):
-        input_file = os.path.join(XDSL_FUNC_opt_ASM_DIR_PATH, filename)
+    for filename in os.listdir(XDSL_FUNC_ASM_DIR_PATH):
+        input_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, filename)
         if XDSL_create_func_file2ret_opt[input_file] == 0:
             basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(XDSL_opt_ASM_DIR_PATH, basename + ".mlir")
+            output_file = os.path.join(XDSL_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_xdsl_reg_alloc.log"), "w"
             )
