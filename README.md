@@ -16,7 +16,7 @@ The fuzzed benchmarks in `benchmarks/MLIR_multi` come from the [mlir-fuzz](https
 
 To generate the benchmarks compiled with llc (selectiondag), llc (globalisel), and veir run: 
 ```
-uv run generate.py --num --jobs --llvm_opt
+python3 generate.py --num --jobs --llvm_opt
 ```
 
 The script `generate.py` populates the folders in `benchmarks` by running the following: 
@@ -36,6 +36,3 @@ Then, the scripts lowers all the files using both LLVM and Veir, to enable the c
 - remove `unrealized_cast` operations, perform register allocation, and lower to RISCV assembly using XDSL, save the result in `benchmarks/XDSL_ASM/*.mlir`
 
 Each step in `generate.py` produces a log file, which one can retrieve in `logs/`. The names in the log file contain the function and the pass that outputted that file.
-
-### How to reuse and customize
-- to add new MLIR tests, add a file to `benchmarks/MLIR_multi`. Files in this folder at the moment are named according to the followign convention: `out_` + number of MLIR modules in the file + `.mlir`.
