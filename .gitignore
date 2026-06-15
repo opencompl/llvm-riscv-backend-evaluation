@@ -2,3 +2,16 @@ llvm-project/*
 veir/*
 xdsl/*
 build/*
+benchmarks/LLC_ASM_globalisel
+benchmarks/LLC_ASM_selectiondag
+benchmarks/LLVM
+benchmarks/LLVMIR
+benchmarks/logs
+benchmarks/MLIR_bb0
+benchmarks/MLIR_bb0_veIR
+benchmarks/MLIR_multi
+benchmarks/MLIR_single
+benchmarks/VEIR_ASM
+benchmarks/VEIR_ASM_opt
+benchmarks/XDSL_FUNC_opt
+benchmarks/XDSL_opt_ASM
