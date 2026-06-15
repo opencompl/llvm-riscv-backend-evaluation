@@ -8,10 +8,9 @@ benchmarks/LLVM
 benchmarks/LLVMIR
 benchmarks/logs
 benchmarks/MLIR_bb0
-benchmarks/MLIR_bb0_veIR
+benchmarks/MLIR_bb0_veir
 benchmarks/MLIR_multi
 benchmarks/MLIR_single
 benchmarks/VEIR_ASM
-benchmarks/VEIR_ASM_opt
-benchmarks/XDSL_FUNC_opt
-benchmarks/XDSL_opt_ASM
+benchmarks/XDSL_FUNC
+benchmarks/XDSL_ASM
