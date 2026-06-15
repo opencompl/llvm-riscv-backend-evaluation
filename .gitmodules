@@ -1,0 +1,9 @@
+[submodule "xdsl"]
+	path = xdsl
+	url = https://github.com/luisacicolini/xdsl.git
+[submodule "veir"]
+	path = veir
+	url = https://github.com/opencompl/veir.git
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/llvm/llvm-project.git
