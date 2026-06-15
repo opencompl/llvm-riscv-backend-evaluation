@@ -36,7 +36,7 @@ LLVMIR_DIR_PATH = (
 )
 
 MLIR_bb0_VEIR_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veIR/"
+    f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veir/"
 )
 MLIR_single_DIR_PATH = (
     f"{ROOT_DIR_PATH}/benchmarks/MLIR_single/"
@@ -224,6 +224,15 @@ def LLC_compile_riscv_globalisel(input_file, output_file, log_file, pass_dict, o
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
+
+def rename_numeric_block_labels(file_path):
+    """Rename block labels starting with a digit (e.g. ^4) to ^bb4 in-place."""
+    with open(file_path, "r") as f:
+        content = f.read()
+    content = re.sub(r'\^(\d+)', r'^bb\1', content)
+    with open(file_path, "w") as f:
+        f.write(content)
+
 
 def _parse_arg_types(bb0_line):
     """Extract argument types from a ^bb0(%arg0: type, ...) line."""
@@ -532,6 +541,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         if LAKE_file2ret_opt[input_file] == 0:
+            rename_numeric_block_labels(input_file)
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(

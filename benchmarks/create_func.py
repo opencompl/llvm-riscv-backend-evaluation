@@ -12,8 +12,14 @@ from xdsl.dialects import func
 
 class MyOptMain(xDSLOptMain):
     def process_module(self, module: ModuleOp):
+        last_op = module.body.block.ops.last
+
+        # VEIR output already has a func.func — nothing to wrap
+        if isinstance(last_op, func.FuncOp):
+            return
+
         module_args_types = module.body.block.arg_types
-        return_op = module.body.block.ops.last
+        return_op = last_op
         return_op_types = [op.type for op in return_op.operands]
         assert isinstance(return_op, llvm.ReturnOp)
 
