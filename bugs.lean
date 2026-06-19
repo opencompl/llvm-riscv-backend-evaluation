@@ -15,6 +15,7 @@ import Std.Tactic.BVDecide
 namespace Veir.Data.RISCV
 
 
+/-- https://godbolt.org/z/z9nevK834 -/
 theorem add_refinement_globalisel {x : LLVM.Int 64} :
     (
       let one := Data.LLVM.Int.add x x
@@ -36,6 +37,7 @@ theorem add_refinement_globalisel {x : LLVM.Int 64} :
   -/
   sorry
 
+/-- https://godbolt.org/z/8T6cWKEhj -/
 theorem add_refinement_selectiondag {x : LLVM.Int 64} :
     (
       let one := Data.LLVM.Int.add x x
