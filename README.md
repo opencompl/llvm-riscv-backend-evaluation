@@ -11,7 +11,8 @@ All these dependencies are correctly set up in `.gitmodules`.
 
 To fetch them and then build everything, run:
 ```
-git submodule update --init --remote --recursive
+git submodule update --init --depth 1 -- llvm-project
+git submodule update --init -- veir xdsl
 ./build.sh
 ```
 You can use the same commands to bring in fresh versions of everything
