@@ -15,8 +15,11 @@ import Std.Tactic.BVDecide
 namespace Veir.Data.RISCV
 
 
-/-- https://godbolt.org/z/z9nevK834 -/
-theorem add_refinement_globalisel {x : LLVM.Int 64} :
+/-- https://godbolt.org/z/z9nevK834
+  we prove this rewrite is incorrect
+-/
+theorem add_refinement_globalisel :
+    ¬ ∀ (x : LLVM.Int 64),
     (
       let one := Data.LLVM.Int.add x x
       let const := Data.LLVM.Int.constant 64 1
@@ -30,12 +33,26 @@ theorem add_refinement_globalisel {x : LLVM.Int 64} :
         let one := Data.RISCV.li 1#64
         Data.RISCV.sub one input
       ) 64) := by
+  simp only [Classical.not_forall]
   /-
+    We obtain from `bv_decide` the counterexample and use it to prove the incorrectness
+    of the rewrite.
+
     Consider the following assignment:
       x.isPoison = false
       x.getValueD = 9223372036854775807#64
   -/
-  sorry
+
+  simp -failIfUnchanged only [veir_bv_normalize]
+  simp +contextual -failIfUnchanged [veir_bv_normalize_post, -BitVec.extractLsb_toNat]
+  let x : LLVM.Int 64 := .val 9223372036854775807#64
+  exists x
+
+/--
+  info: 'Veir.Data.RISCV.add_refinement_globalisel' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms add_refinement_globalisel
 
 /-- https://godbolt.org/z/8T6cWKEhj -/
 theorem add_refinement_selectiondag {x : LLVM.Int 64} :
@@ -54,3 +71,11 @@ theorem add_refinement_selectiondag {x : LLVM.Int 64} :
         Data.RISCV.andi 1#12 two
       ) 64) := by
   veir_bv_decide
+/--
+info: 'Veir.Data.RISCV.add_refinement_selectiondag' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound,
+ add_refinement_selectiondag._native.bv_decide.ax_1_5]
+-/
+#guard_msgs in
+#print axioms add_refinement_selectiondag
