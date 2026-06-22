@@ -9,6 +9,16 @@ The evaluation depends on:
 
 All these dependencies are correctly set up in `.gitmodules`. 
 
+To fetch them and then build everything, run:
+```
+git submodule update --init --depth 1 -- llvm-project
+git submodule update --init -- veir xdsl
+./build.sh
+```
+You can use the same commands to bring in fresh versions of everything
+and then rebuild.
+
+
 The fuzzed benchmarks in `benchmarks/MLIR_multi` come from the [mlir-fuzz](https://github.com/opencompl/mlir-fuzz) fuzzer, at the version reported in `MLIR_multi/version_log.txt`. 
 
 
