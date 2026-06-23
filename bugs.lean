@@ -157,7 +157,6 @@ theorem cmp_ult_refinement_globalisel  :
       (RISCV.Reg.toInt (
         let input1 := (LLVM.Int.toReg x)
         let input2 := (LLVM.Int.toReg y)
-        let zero := Data.RISCV.li 0#64
         let minu := Data.RISCV.minu input1 input2
         let neg := Data.RISCV.neg minu
         let slli := Data.RISCV.slli 33 neg
@@ -183,7 +182,7 @@ theorem cmp_ult_refinement_globalisel  :
 
 /--
   info: 'Veir.Data.RISCV.cmp_ult_refinement_globalisel' depends on axioms: [propext, Classical.choice, Quot.sound]
-  -/
+-/
 #guard_msgs in
 #print axioms cmp_ult_refinement_globalisel
 
