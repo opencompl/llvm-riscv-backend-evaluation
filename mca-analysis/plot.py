@@ -52,16 +52,18 @@ ROOT_DIR_PATH = (
     .strip()
 )
 
-LLVMIR_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
-)
+LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
 
-LLVM_globalisel_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/"
-LLVM_selectiondag_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_selectiondag/"
-VEIR_results_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
-)
-VEIR_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
+PIPELINES = {
+    "LLVM_globalisel": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/",
+    "LLVM_selectiondag": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_selectiondag/",
+    "VEIR": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/",
+}
+
+# Keep legacy aliases for any code that still references them directly
+LLVM_globalisel_results_DIR_PATH = PIPELINES["LLVM_globalisel"]
+LLVM_selectiondag_results_DIR_PATH = PIPELINES["LLVM_selectiondag"]
+VEIR_results_DIR_PATH = PIPELINES["VEIR"]
 
 tables_dir = f"{ROOT_DIR_PATH}/mca-analysis/tables/"
 data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
@@ -85,13 +87,6 @@ def setup_benchmarking_directories():
         os.makedirs(plots_dir)
 
 
-parameters_match = {
-    "tot_instructions": "Instructions:      ",
-    "tot_cycles": "Total Cycles:      ",
-    "tot_uops": "Total uOps:        ",
-    "similarity": "Instructions List:      ",
-}
-
 parameters_labels = {
     "tot_instructions": "#Instructions",
     "tot_cycles": "#Cycles",
@@ -100,7 +95,7 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "VEIR": "Lean-MLIRISel",
+    "VEIR": "VeirISel",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
     "LLVM_globalisel_O3": "GlobalISel (O3)",
@@ -112,89 +107,92 @@ selector_labels = {
 }
 
 
-def parse_instructions(filename):
-    instructions = []
-    in_instruction_section = False
-
-    with open(filename, "r") as f:
+def parse_mca_file(path):
+    """Return (instructions_per_iter, total_cycles, uops_per_iter) from a .out file."""
+    instructions = total_cycles = uops = None
+    with open(path) as f:
         for line in f:
-            if (
-                "[0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:"
-                in line
-            ):
-                in_instruction_section = True
+            if line.startswith("Instructions:"):
+                instructions = int(line.split()[-1]) // 100
+            elif line.startswith("Total Cycles:"):
+                total_cycles = int(line.split()[-1])
+            elif line.startswith("Total uOps:"):
+                uops = int(line.split()[-1]) // 100
+    return instructions, total_cycles, uops
+
+
+def parse_instructions(path):
+    """Return the list of instruction tokens from the resource-pressure section of a .out file."""
+    instructions = []
+    in_section = False
+    with open(path) as f:
+        for line in f:
+            if "[0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:" in line:
+                in_section = True
                 continue
-
-            if in_instruction_section and line.strip():
-                parts = line.split()
-                instruction = parts[8:]  # inst name is in 9th column
-                instructions.append(instruction)
-    if len(instructions) == 0:
-        return None
-    return instructions
+            if in_section and line.strip():
+                instructions.append(line.split()[8:])
+    return instructions or None
 
 
-def extract_data(results_directory, benchmark_name, parameter):
+def build_comparison_dataframes():
     """
-    Parses the results of mca and saves the result in a DataFrame, then printed to `.csv`
+    Read all .out files from each pipeline, match by function name, and return one DataFrame
+    per metric: (df_instructions, df_cycles, df_uops).
+    Only functions present in all three pipelines are included (inner join via dropna).
     """
-    function_names = []
-    parameter_numbers = []
-    for filename in os.listdir(results_directory):
-        file_path = os.path.join(results_directory, filename)
-        try:
-            if parameter == "similarity":
-                with open(file_path, "r") as f:
-                    file_lines = f.readlines()
-                    instructions = parse_instructions(file_path)
-                    if instructions is not None:
-                        parameter_numbers.append(instructions)
-                        function_names.append(filename.split(".")[0])
-            else:
-                with open(file_path, "r") as f:
-                    file_lines = f.readlines()
-                    for line in file_lines:
-                        if parameters_match[parameter] in line:
-                            function_names.append(filename.split(".")[0])
-                            num = int(line.split(" ")[-1])
-                            if parameter == "tot_cycles":
-                                parameter_numbers.append(int(num))
-                            else:
-                                parameter_numbers.append(int(num / 100))
-        except FileNotFoundError:
-            print(f"Warning: file not found at {file_path}. Skipping.")
-    df = pd.DataFrame(
-        {
-            "function_name": function_names,
-            benchmark_name + "_" + parameter: parameter_numbers,
-        }
-    )
-    df.to_csv(data_dir + benchmark_name + "_" + parameter + ".csv")
+    records = {}
+    for pipeline, directory in PIPELINES.items():
+        for filename in sorted(os.listdir(directory)):
+            if not filename.endswith(".out"):
+                continue
+            name = filename[:-4]
+            instr, cycles, uops = parse_mca_file(os.path.join(directory, filename))
+            entry = records.setdefault(name, {})
+            entry[f"{pipeline}_tot_instructions"] = instr
+            entry[f"{pipeline}_tot_cycles"] = cycles
+            entry[f"{pipeline}_tot_uops"] = uops
+
+    df = pd.DataFrame.from_dict(records, orient="index")
+    df.index.name = "function_name"
+    df = df.reset_index().dropna()
+    df["instructions_number"] = df["function_name"].apply(lambda x: int(x.split("_")[0]))
+
+    def _cols(param):
+        return ["function_name", "instructions_number"] + [f"{p}_{param}" for p in PIPELINES]
+
+    return df[_cols("tot_instructions")], df[_cols("tot_cycles")], df[_cols("tot_uops")]
 
 
-def join_dataframes(dataframe_names, parameter):
+def build_similarity_dataframe():
     """
-    Joins multiple DataFrames on a common 'function_name' column.
+    Compare instruction lists emitted by each pipeline for the same function.
+    Writes similarity.csv to data_dir with boolean equivalence columns.
     """
-    for idx, name in enumerate(dataframe_names):
-        df = pd.read_csv(
-            data_dir + name + "_" + parameter + ".csv", index_col=0, header=0
-        )
-        if idx == 0:
-            complete_df = df
-        else:
-            complete_df = pd.merge(complete_df, df, on="function_name", how="inner")
-    complete_df["instructions_number"] = complete_df["function_name"].apply(
-        lambda x: int(x.split("_")[0])
-    )
-    if parameter == "similarity":
-        complete_df["is_eqv_LLVM_globalisel"] = complete_df["LLVM_globalisel_" + parameter] == complete_df["VEIR_" + parameter]
-        complete_df["is_eqv_LLVM_selectiondag"] = complete_df["LLVM_selectiondag_" + parameter] == complete_df["VEIR_" + parameter]
-        # drop LLVM_globalisel_similarity and LLVM_selectiondag_similarity columns
-        complete_df = complete_df.drop(
-            ["LLVM_globalisel_" + parameter, "LLVM_selectiondag_" + parameter, "VEIR_" + parameter], axis=1
-        )
-    complete_df.to_csv(data_dir + parameter + ".csv")
+    records = {}
+    for pipeline, directory in PIPELINES.items():
+        for filename in sorted(os.listdir(directory)):
+            if not filename.endswith(".out"):
+                continue
+            name = filename[:-4]
+            instrs = parse_instructions(os.path.join(directory, filename))
+            if instrs is not None:
+                records.setdefault(name, {})[pipeline] = instrs
+
+    rows = []
+    for name, pipelines in records.items():
+        if not all(p in pipelines for p in PIPELINES):
+            continue
+        rows.append({
+            "function_name": name,
+            "instructions_number": int(name.split("_")[0]),
+            "is_eqv_LLVM_globalisel": pipelines["LLVM_globalisel"] == pipelines["VEIR"],
+            "is_eqv_LLVM_selectiondag": pipelines["LLVM_selectiondag"] == pipelines["VEIR"],
+        })
+
+    df = pd.DataFrame(rows)
+    # df.to_csv(data_dir + "similarity.csv", index=False)
+    return df
 
 
 def sorted_line_plot_all(parameter):
@@ -371,7 +369,7 @@ def bar_plot(parameter, selector1, selector2):
 
     df["diff_class"] = df["diff"].apply(classify)
 
-    df.to_csv(data_dir + parameter + f"_{selector1}_vs_{selector2}_classified.csv")
+    # df.to_csv(data_dir + parameter + f"_{selector1}_vs_{selector2}_classified.csv")
 
     # For each unique value of the initial `instructions_number`, compute the % of each diff_class
     group = (
@@ -802,7 +800,7 @@ def create_latex_command(parameters, filename):
 
     commit_hash = result.stdout.strip()
 
-    f.write(f"% Lean-mlir commit hash: {commit_hash}\n")
+    f.write(f"% Veir commit hash: {commit_hash}\n")
     
     f.write(f"% In the following commands the following rules apply:\n")
     f.write(f"% A: class  <1x\n")
@@ -963,7 +961,7 @@ def create_latex_command(parameters, filename):
 def main():
     parser = argparse.ArgumentParser(
         prog="plot",
-        description="Produce the plots to evaluate the performance of the Lean-MLIR certified Instruction Selection.",
+        description="Produce the plots to evaluate the performance of the Veir certified Instruction Selection.",
     )
 
     parser.add_argument(
@@ -997,43 +995,25 @@ def main():
     )
 
     setup_benchmarking_directories()
-    for parameter in params_to_evaluate:
-        extract_data(LLVM_globalisel_results_DIR_PATH, "LLVM_globalisel", parameter)
-        extract_data(LLVM_selectiondag_results_DIR_PATH, "LLVM_selectiondag", parameter)
-        extract_data(VEIR_results_DIR_PATH, "VEIR", parameter)
+    build_similarity_dataframe().to_csv(data_dir + "similarity.csv", index=False)
 
-        to_join = ["VEIR", "LLVM_globalisel", "LLVM_selectiondag"]
-        join_dataframes(to_join, parameter)
-        if parameter == "similarity":
-            continue
-        else:
-            # if "scatter" in plots_to_produce or "all" in plots_to_produce:
-            #     scatter_plot(parameter, "VEIR", "LLVM_globalisel")
-            #     scatter_plot(parameter, "VEIR", "LLVM_selectiondag")
-            #     # scatter_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
-            # if "sorted" in plots_to_produce or "all" in plots_to_produce:
-            #     sorted_line_plot_all(parameter)
-            #     sorted_line_plot(parameter, "VEIR", "LLVM_globalisel")
-            #     sorted_line_plot(parameter, "VEIR", "LLVM_selectiondag")
-            #     # sorted_line_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
-            # if "overhead" in plots_to_produce or "all" in plots_to_produce:
-            #     overhead_plot(parameter, "VEIR", "LLVM_globalisel")
-            #     overhead_plot(parameter, "VEIR", "LLVM_selectiondag")
-            #     # overhead_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
-            if "stacked" in plots_to_produce or "all" in plots_to_produce:
-                bar_plot(parameter, "VEIR", "LLVM_globalisel")
-                bar_plot(parameter, "VEIR", "LLVM_selectiondag")
-                # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
-            if "violin" in plots_to_produce or "all" in plots_to_produce:
-                violin_plot(parameter, "VEIR", "LLVM_globalisel")
-                violin_plot(parameter, "VEIR", "LLVM_selectiondag")
-                violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag")
-                # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
-            if "proportional" in plots_to_produce or "all" in plots_to_produce:
-                proportional_bar_plot(parameter, "VEIR", "LLVM_globalisel")
-                proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
-                
-                # proportional_bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
+    df_instructions, df_cycles, df_uops = build_comparison_dataframes()
+    df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
+    df_cycles.to_csv(data_dir + "tot_cycles.csv", index=False)
+    df_uops.to_csv(data_dir + "tot_uops.csv", index=False)
+
+    numeric_params = [p for p in params_to_evaluate if p != "similarity"]
+    for parameter in numeric_params:
+        if "stacked" in plots_to_produce or "all" in plots_to_produce:
+            bar_plot(parameter, "VEIR", "LLVM_globalisel")
+            bar_plot(parameter, "VEIR", "LLVM_selectiondag")
+        if "violin" in plots_to_produce or "all" in plots_to_produce:
+            violin_plot(parameter, "VEIR", "LLVM_globalisel")
+            violin_plot(parameter, "VEIR", "LLVM_selectiondag")
+            violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag")
+        if "proportional" in plots_to_produce or "all" in plots_to_produce:
+            proportional_bar_plot(parameter, "VEIR", "LLVM_globalisel")
+            proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
 
     geomean_plot_tot_cycles()
     equivalent_plot_perc()
