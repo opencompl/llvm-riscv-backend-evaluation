@@ -69,6 +69,7 @@ LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/logs/"
 AUTOGEN_DIR_PATHS = [
     LLVM_DIR_PATH,
     LLVMIR_DIR_PATH,
+    MLIR_single_DIR_PATH,
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
@@ -77,6 +78,13 @@ AUTOGEN_DIR_PATHS = [
     XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
 ]
+
+
+def cleanup_empty_logs():
+    for filename in os.listdir(LOGS_DIR_PATH):
+        log_path = os.path.join(LOGS_DIR_PATH, filename)
+        if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
+            os.remove(log_path)
 
 
 def setup_benchmarking_directories():
@@ -96,9 +104,18 @@ def sanitize(file_path):
     content = content.replace("sextw", "sext.w")
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
+    content = content.replace("czeronez", "czero.nez")
     with open(file_path, "w") as f:
         f.write(content)
 
+def rewrite_value_attr_to_immediate(file_path):
+    with open(file_path, "r") as f:
+        content = f.read()
+    content = re.sub(r'(riscv\.xori\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>', r'\1 {immediate = \3 : si12}', content)
+    content = re.sub(r'(riscv\.sltiu\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>', r'\1 {immediate = \3 : si12}', content)
+    content = re.sub(r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>', r'riscv.lui"\1 {immediate = \2 : i20}', content)
+    with open(file_path, "w") as f:
+        f.write(content)
 
 def replace_hyphens_in_variables(file_path):
     """
@@ -547,6 +564,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         sanitize(input_file)
+        rewrite_value_attr_to_immediate(input_file)
 
     XDSL_create_func_file2ret_opt = dict()
     idx = 0
@@ -600,6 +618,8 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
         idx += 1
         percentage = (float(idx) / float(len(XDSL_create_func_file2ret_opt))) * 100
         print(f"allocating registers and outputting assembly (opt): {percentage:.2f}%")
+
+    cleanup_empty_logs()
 
 
 def main():
