@@ -69,6 +69,7 @@ LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/logs/"
 AUTOGEN_DIR_PATHS = [
     LLVM_DIR_PATH,
     LLVMIR_DIR_PATH,
+    MLIR_single_DIR_PATH,
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
