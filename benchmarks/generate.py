@@ -96,6 +96,7 @@ def sanitize(file_path):
     content = content.replace("sextw", "sext.w")
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
+    content = content.replace("czeronez", "czero.nez")
     with open(file_path, "w") as f:
         f.write(content)
 

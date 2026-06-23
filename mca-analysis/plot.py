@@ -53,19 +53,19 @@ ROOT_DIR_PATH = (
 )
 
 LLVMIR_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/benchmarks/LLVMIR/"
+    f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
 )
 
-LLVM_globalisel_results_DIR_PATH = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/results/LLVM_globalisel/"
-LLVM_selectiondag_results_DIR_PATH = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/results/LLVM_selectiondag/"
-LEANMLIR_results_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/results/LEANMLIR/"
+LLVM_globalisel_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/"
+LLVM_selectiondag_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_selectiondag/"
+VEIR_results_DIR_PATH = (
+    f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
 )
-LEANMLIR_opt_results_DIR_PATH = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/results/LEANMLIR_opt/"
+VEIR_opt_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
 
-tables_dir = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/tables/"
-data_dir = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/data/"
-plots_dir = f"{ROOT_DIR_PATH}/SSA/Projects/LLVMRiscV/Evaluation/mca-analysis/plots/"
+tables_dir = f"{ROOT_DIR_PATH}/mca-analysis/tables/"
+data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
+plots_dir = f"{ROOT_DIR_PATH}/mca-analysis/plots/"
 
 
 def setup_benchmarking_directories():
@@ -100,7 +100,7 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "LEANMLIR_opt": "Lean-MLIRISel",
+    "VEIR_opt": "Lean-MLIRISel",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
     "LLVM_globalisel_O3": "GlobalISel (O3)",
@@ -188,11 +188,11 @@ def join_dataframes(dataframe_names, parameter):
         lambda x: int(x.split("_")[0])
     )
     if parameter == "similarity":
-        complete_df["is_eqv_LLVM_globalisel"] = complete_df["LLVM_globalisel_" + parameter] == complete_df["LEANMLIR_opt_" + parameter]
-        complete_df["is_eqv_LLVM_selectiondag"] = complete_df["LLVM_selectiondag_" + parameter] == complete_df["LEANMLIR_opt_" + parameter]
+        complete_df["is_eqv_LLVM_globalisel"] = complete_df["LLVM_globalisel_" + parameter] == complete_df["VEIR_opt_" + parameter]
+        complete_df["is_eqv_LLVM_selectiondag"] = complete_df["LLVM_selectiondag_" + parameter] == complete_df["VEIR_opt_" + parameter]
         # drop LLVM_globalisel_similarity and LLVM_selectiondag_similarity columns
         complete_df = complete_df.drop(
-            ["LLVM_globalisel_" + parameter, "LLVM_selectiondag_" + parameter, "LEANMLIR_opt_" + parameter], axis=1
+            ["LLVM_globalisel_" + parameter, "LLVM_selectiondag_" + parameter, "VEIR_opt_" + parameter], axis=1
         )
     complete_df.to_csv(data_dir + parameter + ".csv")
 
@@ -202,7 +202,7 @@ def sorted_line_plot_all(parameter):
 
     sorted_df = df.sort_values(
         by=[
-            "LEANMLIR_opt_" + parameter,
+            "VEIR_opt_" + parameter,
             "LLVM_globalisel_" + parameter,
             "LLVM_selectiondag_" + parameter,
         ]
@@ -210,8 +210,8 @@ def sorted_line_plot_all(parameter):
 
     plt.plot(
         range(len(sorted_df)),
-        sorted_df["LEANMLIR_opt_" + parameter],
-        label=selector_labels["LEANMLIR_opt"],
+        sorted_df["VEIR_opt_" + parameter],
+        label=selector_labels["VEIR_opt"],
         color=dark_green,
     )
     plt.plot(
@@ -229,7 +229,7 @@ def sorted_line_plot_all(parameter):
     plot_max = (
         np.max(
             [
-                sorted_df["LEANMLIR_opt_" + parameter].min(),
+                sorted_df["VEIR_opt_" + parameter].min(),
                 sorted_df["LLVM_globalisel_" + parameter].min(),
                 sorted_df["LLVM_selectiondag_" + parameter].min(),
             ]
@@ -632,14 +632,14 @@ def geomean_plot_tot_cycles():
     # tot_cycles
     df_cycles = pd.read_csv(data_dir + "tot_cycles.csv")
     plt.figure(figsize=(6, 5))
-    df_cycles['ratio_gisel'] = df_cycles['LEANMLIR_opt_tot_cycles'] / df_cycles['LLVM_globalisel_tot_cycles']
-    df_cycles['ratio_sdag'] = df_cycles['LEANMLIR_opt_tot_cycles'] / df_cycles['LLVM_selectiondag_tot_cycles']
+    df_cycles['ratio_gisel'] = df_cycles['VEIR_opt_tot_cycles'] / df_cycles['LLVM_globalisel_tot_cycles']
+    df_cycles['ratio_sdag'] = df_cycles['VEIR_opt_tot_cycles'] / df_cycles['LLVM_selectiondag_tot_cycles']
     geomean_gisel_cycles = np.exp(np.mean(np.log(df_cycles["ratio_gisel"])))
     geomean_sdag_cycles = np.exp(np.mean(np.log(df_cycles["ratio_sdag"])))
     #tot_instructions 
     df_instructions = pd.read_csv(data_dir + "tot_instructions.csv")
-    df_instructions['ratio_gisel'] = df_instructions['LEANMLIR_opt_tot_instructions'] / df_instructions['LLVM_globalisel_tot_instructions']
-    df_instructions['ratio_sdag'] = df_instructions['LEANMLIR_opt_tot_instructions'] / df_instructions['LLVM_selectiondag_tot_instructions']
+    df_instructions['ratio_gisel'] = df_instructions['VEIR_opt_tot_instructions'] / df_instructions['LLVM_globalisel_tot_instructions']
+    df_instructions['ratio_sdag'] = df_instructions['VEIR_opt_tot_instructions'] / df_instructions['LLVM_selectiondag_tot_instructions']
     geomean_gisel_instructions = np.exp(np.mean(np.log(df_instructions["ratio_gisel"])))
     geomean_sdag_instructions= np.exp(np.mean(np.log(df_instructions["ratio_sdag"])))
     geomeans_gisel = [geomean_gisel_instructions, geomean_gisel_cycles]
@@ -816,8 +816,8 @@ def create_latex_command(parameters, filename):
     for p in parameters:
         df = pd.read_csv(data_dir + p + ".csv")
         
-        df['ratios_gisel'] = df['LEANMLIR_opt_' + p] / df['LLVM_globalisel_' + p]
-        df['ratios_sdag'] = df['LEANMLIR_opt_' + p] / df['LLVM_selectiondag_' + p]
+        df['ratios_gisel'] = df['VEIR_opt_' + p] / df['LLVM_globalisel_' + p]
+        df['ratios_sdag'] = df['VEIR_opt_' + p] / df['LLVM_selectiondag_' + p]
         df['ratios_gisel_sdag'] = df['LLVM_globalisel_' + p] / df['LLVM_selectiondag_' + p]
         df['ratios_gisel_class'] = df['ratios_gisel'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
         df['ratios_sdag_class'] = df['ratios_sdag'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
@@ -835,11 +835,11 @@ def create_latex_command(parameters, filename):
             p = 'NumCycles'
         else: 
             p = 'NumInstr'
-        latex_command_max_gisel = f"\\newcommand{{\\MaxRatioLeanmlirVsGiselParam{p}}}{{{max_ratio_gisel:.2f}}}\n"
-        latex_command_max_sdag = f"\\newcommand{{\\MaxRatioLeanmlirVsSdagParam{p}}}{{{max_ratio_sdag:.2f}}}\n"
+        latex_command_max_gisel = f"\\newcommand{{\\MaxRatioVEIRVsGiselParam{p}}}{{{max_ratio_gisel:.2f}}}\n"
+        latex_command_max_sdag = f"\\newcommand{{\\MaxRatioVEIRVsSdagParam{p}}}{{{max_ratio_sdag:.2f}}}\n"
         latex_command_max_gisel_sdag = f"\\newcommand{{\\MaxRatioGiselVsSdagParam{p}}}{{{max_ratio_gisel_sdag:.2f}}}\n"
-        latex_command_min_gisel = f"\\newcommand{{\\MinRatioLeanmlirVsGiselParam{p}}}{{{min_ratio_gisel:.2f}}}\n"
-        latex_command_min_sdag = f"\\newcommand{{\\MinRatioLeanmlirVsSdagParam{p}}}{{{min_ratio_sdag:.2f}}}\n"
+        latex_command_min_gisel = f"\\newcommand{{\\MinRatioVEIRVsGiselParam{p}}}{{{min_ratio_gisel:.2f}}}\n"
+        latex_command_min_sdag = f"\\newcommand{{\\MinRatioVEIRVsSdagParam{p}}}{{{min_ratio_sdag:.2f}}}\n"
         latex_command_min_gisel_sdag = f"\\newcommand{{\\MinRatioGiselVsSdagParam{p}}}{{{min_ratio_gisel_sdag:.2f}}}\n"
         
         f.write(latex_command_max_gisel)
@@ -868,13 +868,13 @@ def create_latex_command(parameters, filename):
             c = row['ratios_gisel_class']
             percentage = row['proportion']
             instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercLeanmlirVsGiselParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
+            latex_command = f"\\newcommand{{\\PercVEIRVsGiselParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
             f.write(latex_command)
         for _, row in df_grouped_sdag.iterrows(): 
             c = row['ratios_sdag_class']
             percentage = row['proportion']
             instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercLeanmlirVsSdagParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
+            latex_command = f"\\newcommand{{\\PercVEIRVsSdagParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
             f.write(latex_command)
             
         for _, row in df_grouped_gisel_sdag.iterrows(): 
@@ -891,7 +891,7 @@ def create_latex_command(parameters, filename):
         )
         for instr_num, geomean_value in geomeans_gisel.items():
             instructions_number = num2words(instr_num)
-            latex_command = f"\\newcommand{{\\GeomeanLeanmlirVsGiselParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
+            latex_command = f"\\newcommand{{\\GeomeanVEIRVsGiselParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
             f.write(latex_command)
             
         geomeans_sdag = df.groupby('instructions_number')['ratios_sdag'].apply(
@@ -899,25 +899,25 @@ def create_latex_command(parameters, filename):
         )
         for instr_num, geomean_value in geomeans_sdag.items():
             instructions_number = num2words(instr_num)
-            latex_command = f"\\newcommand{{\\GeomeanLeanmlirVsSdagParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
+            latex_command = f"\\newcommand{{\\GeomeanVEIRVsSdagParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
             f.write(latex_command)
         
         # total geomeans
         
         geomean_gisel_tot = np.exp(np.log(df['ratios_gisel']).mean())
-        latex_command_gisel_geomean = f"\\newcommand{{\\GeomeanTotLeanmlirVsGisel{p}}}{{{geomean_gisel_tot:.1f}}}\n"
+        latex_command_gisel_geomean = f"\\newcommand{{\\GeomeanTotVEIRVsGisel{p}}}{{{geomean_gisel_tot:.1f}}}\n"
         f.write(latex_command_gisel_geomean)
         
         geomean_gisel_tot_perc = (np.exp(np.log(df['ratios_gisel']).mean()) - 1) * 100
-        latex_command_gisel_geomean_perc = f"\\newcommand{{\\GeomeanTotLeanmlirVsGiselSlowDownPerc{p}}}{{{geomean_gisel_tot_perc:.1f}\%}}\n"
+        latex_command_gisel_geomean_perc = f"\\newcommand{{\\GeomeanTotVEIRVsGiselSlowDownPerc{p}}}{{{geomean_gisel_tot_perc:.1f}\%}}\n"
         f.write(latex_command_gisel_geomean_perc)
         
         geomean_sdag_tot = np.exp(np.log(df['ratios_sdag']).mean())
-        latex_command_sdag_geomean = f"\\newcommand{{\\GeomeanTotLeanmlirVsSdag{p}}}{{{geomean_sdag_tot:.1f}}}\n"
+        latex_command_sdag_geomean = f"\\newcommand{{\\GeomeanTotVEIRVsSdag{p}}}{{{geomean_sdag_tot:.1f}}}\n"
         f.write(latex_command_sdag_geomean)
         
         geomean_sdag_tot_perc = (np.exp(np.log(df['ratios_sdag']).mean()) - 1) * 100
-        latex_command_sdag_geomean_perc = f"\\newcommand{{\\GeomeanTotLeanmlirVsSdagSlowDownPerc{p}}}{{{geomean_sdag_tot_perc:.1f}\%}}\n"
+        latex_command_sdag_geomean_perc = f"\\newcommand{{\\GeomeanTotVEIRVsSdagSlowDownPerc{p}}}{{{geomean_sdag_tot_perc:.1f}\%}}\n"
         f.write(latex_command_sdag_geomean_perc)
         
         
@@ -1000,38 +1000,38 @@ def main():
     for parameter in params_to_evaluate:
         extract_data(LLVM_globalisel_results_DIR_PATH, "LLVM_globalisel", parameter)
         extract_data(LLVM_selectiondag_results_DIR_PATH, "LLVM_selectiondag", parameter)
-        extract_data(LEANMLIR_opt_results_DIR_PATH, "LEANMLIR_opt", parameter)
+        extract_data(VEIR_opt_results_DIR_PATH, "VEIR_opt", parameter)
 
-        to_join = ["LEANMLIR_opt", "LLVM_globalisel", "LLVM_selectiondag"]
+        to_join = ["VEIR_opt", "LLVM_globalisel", "LLVM_selectiondag"]
         join_dataframes(to_join, parameter)
         if parameter == "similarity":
             continue
         else:
             # if "scatter" in plots_to_produce or "all" in plots_to_produce:
-            #     scatter_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-            #     scatter_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+            #     scatter_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+            #     scatter_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
             #     # scatter_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             # if "sorted" in plots_to_produce or "all" in plots_to_produce:
             #     sorted_line_plot_all(parameter)
-            #     sorted_line_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-            #     sorted_line_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+            #     sorted_line_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+            #     sorted_line_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
             #     # sorted_line_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             # if "overhead" in plots_to_produce or "all" in plots_to_produce:
-            #     overhead_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-            #     overhead_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+            #     overhead_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+            #     overhead_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
             #     # overhead_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "stacked" in plots_to_produce or "all" in plots_to_produce:
-                bar_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-                bar_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+                bar_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+                bar_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
                 # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "violin" in plots_to_produce or "all" in plots_to_produce:
-                violin_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-                violin_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+                violin_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+                violin_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
                 violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag")
                 # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "proportional" in plots_to_produce or "all" in plots_to_produce:
-                proportional_bar_plot(parameter, "LEANMLIR_opt", "LLVM_globalisel")
-                proportional_bar_plot(parameter, "LEANMLIR_opt", "LLVM_selectiondag")
+                proportional_bar_plot(parameter, "VEIR_opt", "LLVM_globalisel")
+                proportional_bar_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
                 
                 # proportional_bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
 
