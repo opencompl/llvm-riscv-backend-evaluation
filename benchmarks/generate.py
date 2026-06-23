@@ -331,7 +331,7 @@ def LAKE_compile_riscv64(jobs, pass_dict):
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
-            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-riscv64,reconcile-cast\" "
+            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-sdag-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine\" "
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
             futures[future] = output_file
