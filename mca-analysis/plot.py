@@ -95,7 +95,7 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "VEIR": "Lean-MLIRISel",
+    "VEIR": "VeirISel",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
     "LLVM_globalisel_O3": "GlobalISel (O3)",
@@ -800,7 +800,7 @@ def create_latex_command(parameters, filename):
 
     commit_hash = result.stdout.strip()
 
-    f.write(f"% Lean-mlir commit hash: {commit_hash}\n")
+    f.write(f"% Veir commit hash: {commit_hash}\n")
     
     f.write(f"% In the following commands the following rules apply:\n")
     f.write(f"% A: class  <1x\n")
@@ -961,7 +961,7 @@ def create_latex_command(parameters, filename):
 def main():
     parser = argparse.ArgumentParser(
         prog="plot",
-        description="Produce the plots to evaluate the performance of the Lean-MLIR certified Instruction Selection.",
+        description="Produce the plots to evaluate the performance of the Veir certified Instruction Selection.",
     )
 
     parser.add_argument(
