@@ -89,6 +89,15 @@ def setup_benchmarking_directories():
         else:
             shutil.rmtree(directory)
             os.makedirs(directory)
+            
+def sanitize(file_path):
+    with open(file_path, "r") as f:
+        content = f.read()
+    content = content.replace("sextw", "sext.w")
+    content = content.replace("zextw", "zext.w")
+    content = content.replace("czeroeqz", "czero.eqz")
+    with open(file_path, "w") as f:
+        f.write(content)
 
 
 def replace_hyphens_in_variables(file_path):
@@ -322,7 +331,7 @@ def LAKE_compile_riscv64(jobs, pass_dict):
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
-            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-riscv64,reconcile-cast\" "
+            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-sdag-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine\" "
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
             futures[future] = output_file
@@ -534,6 +543,10 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     #     idx += 1
     #     percentage = (float(idx) / float(len(LAKE_file2ret))) * 100
     #     print(f"creating func.func module: {percentage:.2f}%")
+    
+    for filename in os.listdir(VEIR_ASM_DIR_PATH):
+        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
+        sanitize(input_file)
 
     XDSL_create_func_file2ret_opt = dict()
     idx = 0
