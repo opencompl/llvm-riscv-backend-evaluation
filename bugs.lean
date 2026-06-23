@@ -79,3 +79,32 @@ info: 'Veir.Data.RISCV.add_refinement_selectiondag' depends on axioms: [propext,
 -/
 #guard_msgs in
 #print axioms add_refinement_selectiondag
+
+theorem mul_refinement_selectiondag {x : LLVM.Int 64} :
+    (
+      let const := Data.LLVM.Int.constant 64 (-1)
+      let neg := Data.LLVM.Int.mul x const (nuw := true)
+      Data.LLVM.Int.and x neg
+    )
+     ⊒
+      (RISCV.Reg.toInt (
+        let input := (LLVM.Int.toReg x)
+        let one := Data.RISCV.li 0#64
+        let two := Data.RISCV.sub one input
+        Data.RISCV.and input two
+      ) 64) := by
+  veir_bv_decide
+
+theorem mul_refinement_globalisel {x : LLVM.Int 64} :
+    (
+      let const := Data.LLVM.Int.constant 64 (-1)
+      let neg := Data.LLVM.Int.mul x const (nuw := true)
+      Data.LLVM.Int.and x neg
+    )
+     ⊒
+      (RISCV.Reg.toInt (
+        let input := (LLVM.Int.toReg x)
+        let one := Data.RISCV.li 0#64
+        Data.RISCV.sub one input
+      ) 64) := by
+  veir_bv_decide
