@@ -18,6 +18,15 @@ git submodule update --init -- veir xdsl
 You can use the same commands to bring in fresh versions of everything
 and then rebuild.
 
+To add llvm and mlir to your path: 
+```
+export PATH=$PATH:/LLVM_PATH/build/bin
+```
+
+The benchmatks' generation also requires running into the XDSL virtual environment: 
+```
+source ./build/xdsl-venv/bin/activate
+```
 
 The fuzzed benchmarks in `benchmarks/MLIR_multi` come from the [mlir-fuzz](https://github.com/opencompl/mlir-fuzz) fuzzer, at the version reported in `MLIR_multi/version_log.txt`. 
 
