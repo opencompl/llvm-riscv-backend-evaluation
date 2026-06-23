@@ -80,6 +80,8 @@ info: 'Veir.Data.RISCV.add_refinement_selectiondag' depends on axioms: [propext,
 #guard_msgs in
 #print axioms add_refinement_selectiondag
 
+
+/-- https://godbolt.org/z/YesPhWvza -/
 theorem mul_refinement_selectiondag {x : LLVM.Int 64} :
     (
       let const := Data.LLVM.Int.constant 64 (-1)
