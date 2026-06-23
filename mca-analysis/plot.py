@@ -61,7 +61,7 @@ LLVM_selectiondag_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM
 VEIR_results_DIR_PATH = (
     f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
 )
-VEIR_opt_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
+VEIR_results_DIR_PATH = f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/"
 
 tables_dir = f"{ROOT_DIR_PATH}/mca-analysis/tables/"
 data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
@@ -100,7 +100,7 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "VEIR_opt": "Lean-MLIRISel",
+    "VEIR": "Lean-MLIRISel",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
     "LLVM_globalisel_O3": "GlobalISel (O3)",
@@ -188,11 +188,11 @@ def join_dataframes(dataframe_names, parameter):
         lambda x: int(x.split("_")[0])
     )
     if parameter == "similarity":
-        complete_df["is_eqv_LLVM_globalisel"] = complete_df["LLVM_globalisel_" + parameter] == complete_df["VEIR_opt_" + parameter]
-        complete_df["is_eqv_LLVM_selectiondag"] = complete_df["LLVM_selectiondag_" + parameter] == complete_df["VEIR_opt_" + parameter]
+        complete_df["is_eqv_LLVM_globalisel"] = complete_df["LLVM_globalisel_" + parameter] == complete_df["VEIR_" + parameter]
+        complete_df["is_eqv_LLVM_selectiondag"] = complete_df["LLVM_selectiondag_" + parameter] == complete_df["VEIR_" + parameter]
         # drop LLVM_globalisel_similarity and LLVM_selectiondag_similarity columns
         complete_df = complete_df.drop(
-            ["LLVM_globalisel_" + parameter, "LLVM_selectiondag_" + parameter, "VEIR_opt_" + parameter], axis=1
+            ["LLVM_globalisel_" + parameter, "LLVM_selectiondag_" + parameter, "VEIR_" + parameter], axis=1
         )
     complete_df.to_csv(data_dir + parameter + ".csv")
 
@@ -202,7 +202,7 @@ def sorted_line_plot_all(parameter):
 
     sorted_df = df.sort_values(
         by=[
-            "VEIR_opt_" + parameter,
+            "VEIR_" + parameter,
             "LLVM_globalisel_" + parameter,
             "LLVM_selectiondag_" + parameter,
         ]
@@ -210,8 +210,8 @@ def sorted_line_plot_all(parameter):
 
     plt.plot(
         range(len(sorted_df)),
-        sorted_df["VEIR_opt_" + parameter],
-        label=selector_labels["VEIR_opt"],
+        sorted_df["VEIR_" + parameter],
+        label=selector_labels["VEIR"],
         color=dark_green,
     )
     plt.plot(
@@ -229,7 +229,7 @@ def sorted_line_plot_all(parameter):
     plot_max = (
         np.max(
             [
-                sorted_df["VEIR_opt_" + parameter].min(),
+                sorted_df["VEIR_" + parameter].min(),
                 sorted_df["LLVM_globalisel_" + parameter].min(),
                 sorted_df["LLVM_selectiondag_" + parameter].min(),
             ]
@@ -632,14 +632,14 @@ def geomean_plot_tot_cycles():
     # tot_cycles
     df_cycles = pd.read_csv(data_dir + "tot_cycles.csv")
     plt.figure(figsize=(6, 5))
-    df_cycles['ratio_gisel'] = df_cycles['VEIR_opt_tot_cycles'] / df_cycles['LLVM_globalisel_tot_cycles']
-    df_cycles['ratio_sdag'] = df_cycles['VEIR_opt_tot_cycles'] / df_cycles['LLVM_selectiondag_tot_cycles']
+    df_cycles['ratio_gisel'] = df_cycles['VEIR_tot_cycles'] / df_cycles['LLVM_globalisel_tot_cycles']
+    df_cycles['ratio_sdag'] = df_cycles['VEIR_tot_cycles'] / df_cycles['LLVM_selectiondag_tot_cycles']
     geomean_gisel_cycles = np.exp(np.mean(np.log(df_cycles["ratio_gisel"])))
     geomean_sdag_cycles = np.exp(np.mean(np.log(df_cycles["ratio_sdag"])))
     #tot_instructions 
     df_instructions = pd.read_csv(data_dir + "tot_instructions.csv")
-    df_instructions['ratio_gisel'] = df_instructions['VEIR_opt_tot_instructions'] / df_instructions['LLVM_globalisel_tot_instructions']
-    df_instructions['ratio_sdag'] = df_instructions['VEIR_opt_tot_instructions'] / df_instructions['LLVM_selectiondag_tot_instructions']
+    df_instructions['ratio_gisel'] = df_instructions['VEIR_tot_instructions'] / df_instructions['LLVM_globalisel_tot_instructions']
+    df_instructions['ratio_sdag'] = df_instructions['VEIR_tot_instructions'] / df_instructions['LLVM_selectiondag_tot_instructions']
     geomean_gisel_instructions = np.exp(np.mean(np.log(df_instructions["ratio_gisel"])))
     geomean_sdag_instructions= np.exp(np.mean(np.log(df_instructions["ratio_sdag"])))
     geomeans_gisel = [geomean_gisel_instructions, geomean_gisel_cycles]
@@ -816,8 +816,8 @@ def create_latex_command(parameters, filename):
     for p in parameters:
         df = pd.read_csv(data_dir + p + ".csv")
         
-        df['ratios_gisel'] = df['VEIR_opt_' + p] / df['LLVM_globalisel_' + p]
-        df['ratios_sdag'] = df['VEIR_opt_' + p] / df['LLVM_selectiondag_' + p]
+        df['ratios_gisel'] = df['VEIR_' + p] / df['LLVM_globalisel_' + p]
+        df['ratios_sdag'] = df['VEIR_' + p] / df['LLVM_selectiondag_' + p]
         df['ratios_gisel_sdag'] = df['LLVM_globalisel_' + p] / df['LLVM_selectiondag_' + p]
         df['ratios_gisel_class'] = df['ratios_gisel'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
         df['ratios_sdag_class'] = df['ratios_sdag'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
@@ -1000,38 +1000,38 @@ def main():
     for parameter in params_to_evaluate:
         extract_data(LLVM_globalisel_results_DIR_PATH, "LLVM_globalisel", parameter)
         extract_data(LLVM_selectiondag_results_DIR_PATH, "LLVM_selectiondag", parameter)
-        extract_data(VEIR_opt_results_DIR_PATH, "VEIR_opt", parameter)
+        extract_data(VEIR_results_DIR_PATH, "VEIR", parameter)
 
-        to_join = ["VEIR_opt", "LLVM_globalisel", "LLVM_selectiondag"]
+        to_join = ["VEIR", "LLVM_globalisel", "LLVM_selectiondag"]
         join_dataframes(to_join, parameter)
         if parameter == "similarity":
             continue
         else:
             # if "scatter" in plots_to_produce or "all" in plots_to_produce:
-            #     scatter_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-            #     scatter_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+            #     scatter_plot(parameter, "VEIR", "LLVM_globalisel")
+            #     scatter_plot(parameter, "VEIR", "LLVM_selectiondag")
             #     # scatter_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             # if "sorted" in plots_to_produce or "all" in plots_to_produce:
             #     sorted_line_plot_all(parameter)
-            #     sorted_line_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-            #     sorted_line_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+            #     sorted_line_plot(parameter, "VEIR", "LLVM_globalisel")
+            #     sorted_line_plot(parameter, "VEIR", "LLVM_selectiondag")
             #     # sorted_line_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             # if "overhead" in plots_to_produce or "all" in plots_to_produce:
-            #     overhead_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-            #     overhead_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+            #     overhead_plot(parameter, "VEIR", "LLVM_globalisel")
+            #     overhead_plot(parameter, "VEIR", "LLVM_selectiondag")
             #     # overhead_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "stacked" in plots_to_produce or "all" in plots_to_produce:
-                bar_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-                bar_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+                bar_plot(parameter, "VEIR", "LLVM_globalisel")
+                bar_plot(parameter, "VEIR", "LLVM_selectiondag")
                 # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "violin" in plots_to_produce or "all" in plots_to_produce:
-                violin_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-                violin_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+                violin_plot(parameter, "VEIR", "LLVM_globalisel")
+                violin_plot(parameter, "VEIR", "LLVM_selectiondag")
                 violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag")
                 # bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
             if "proportional" in plots_to_produce or "all" in plots_to_produce:
-                proportional_bar_plot(parameter, "VEIR_opt", "LLVM_globalisel")
-                proportional_bar_plot(parameter, "VEIR_opt", "LLVM_selectiondag")
+                proportional_bar_plot(parameter, "VEIR", "LLVM_globalisel")
+                proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
                 
                 # proportional_bar_plot(parameter, 'LLVM_globalisel', 'LLVM_selectiondag')
 
