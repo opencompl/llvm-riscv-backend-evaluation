@@ -1016,7 +1016,7 @@ def main():
             proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
 
     geomean_plot_tot_cycles()
-    # equivalent_plot_perc()
+    equivalent_plot_perc()
     create_latex_command(['tot_cycles', 'tot_instructions'], plots_dir + 'numerical_commands.tex')
     
 if __name__ == "__main__":
