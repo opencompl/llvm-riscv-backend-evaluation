@@ -517,6 +517,8 @@ def violin_plot(parameter, selector1, selector2):
     print(f"Max ratio for {parameter} between {selector1} and {selector2} is {max_ratio}")
     
     
+    
+    
     if max_ratio > 200:
         plt.yticks(np.arange(0, 270, 50))
     else:
@@ -949,10 +951,16 @@ def create_latex_command(parameters, filename):
     latex_command_similarity_tot_sdag = f"\\newcommand{{\\PercIdenticalSdagTot}}{{{tot_similarity_sdag_true:.1f}\%}}\n"
     f.write(latex_command_similarity_tot_sdag)
     f.close()
-    
-    
 
-    
+def print_worst_performers(n=5):
+    for param in ["tot_instructions", "tot_cycles", "tot_uops"]:
+        df = pd.read_csv(data_dir + param + ".csv")
+        df["ratio_gisel"] = df[f"VEIR_{param}"] / df[f"LLVM_globalisel_{param}"]
+        df["ratio_sdag"] = df[f"VEIR_{param}"] / df[f"LLVM_selectiondag_{param}"]
+        df["max_ratio"] = df[["ratio_gisel", "ratio_sdag"]].max(axis=1)
+        top = df.nlargest(n, "max_ratio")[["function_name", "ratio_gisel", "ratio_sdag", "max_ratio"]]
+        print(f"\n=== {param} — top {n} worst (max ratio) ===")
+        print(top.to_string(index=False))
 
 
 def main():
@@ -998,6 +1006,7 @@ def main():
     df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
     df_cycles.to_csv(data_dir + "tot_cycles.csv", index=False)
     df_uops.to_csv(data_dir + "tot_uops.csv", index=False)
+    print_worst_performers()
 
     numeric_params = [p for p in params_to_evaluate if p != "similarity"]
     for parameter in numeric_params:

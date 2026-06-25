@@ -1,0 +1,15 @@
+.text
+.globl func0
+.p2align 2
+func0:
+    mv t0, a0
+    mv t2, a1
+    mv t3, a2
+    sext.w t1, t2
+    rem t3, t3, t0
+    divu t1, t1, t3
+    zext.w t2, t2
+    srl t1, t1, t2
+    div t0, t0, t1
+    mv a0, t0
+    ret
