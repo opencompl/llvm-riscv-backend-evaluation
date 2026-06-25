@@ -382,10 +382,7 @@ def bar_plot(parameter, selector1, selector2):
     # Ensure all classes are present for consistent coloring/order
     class_order = ["<1x","1x","1x-1.5x", "1.5x-2x", ">2x"]
 
-    # for c in class_order:
-    #     if c not in group.columns:
-    #         group[c] = 0
-    group = group[class_order]
+    group = group.reindex(columns=class_order, fill_value=0)
 
     # Colors for each class
     class_colors = {
@@ -674,14 +671,14 @@ def equivalent_plot_perc():
         .value_counts(normalize=True)
         .unstack(fill_value=0)
         * 100
-    )
-    
+    ).reindex(columns=[False, True], fill_value=0)
+
     df_eqv_sdag = (
         df_similarity.groupby("instructions_number")["is_eqv_LLVM_selectiondag"]
         .value_counts(normalize=True)
         .unstack(fill_value=0)
         * 100
-    )
+    ).reindex(columns=[False, True], fill_value=0)
     plt.figure(figsize=(7, 5))
 
     width = 0.4
@@ -1004,9 +1001,9 @@ def main():
 
     numeric_params = [p for p in params_to_evaluate if p != "similarity"]
     for parameter in numeric_params:
-        # if "stacked" in plots_to_produce or "all" in plots_to_produce:
-            # bar_plot(parameter, "VEIR", "LLVM_globalisel")
-            # bar_plot(parameter, "VEIR", "LLVM_selectiondag")
+        if "stacked" in plots_to_produce or "all" in plots_to_produce:
+            bar_plot(parameter, "VEIR", "LLVM_globalisel")
+            bar_plot(parameter, "VEIR", "LLVM_selectiondag")
         if "violin" in plots_to_produce or "all" in plots_to_produce:
             violin_plot(parameter, "VEIR", "LLVM_globalisel")
             violin_plot(parameter, "VEIR", "LLVM_selectiondag")
