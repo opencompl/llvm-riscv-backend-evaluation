@@ -1,0 +1,1 @@
+XDSL_reg_alloc failed for /home/lc985/llvm-riscv-backend-evaluation/benchmarks/XDSL_FUNC/3_function_91.mlir with error: Unsupported bit width: i1

@@ -1,0 +1,10 @@
+"builtin.module"() ({
+  "func.func"() <{sym_name = "func0", function_type = () -> i64}> ({
+  ^bb0(%arg0: i1, %arg1: i64):
+    %0 = "llvm.urem"(%arg1, %arg1) : (i64, i64) -> i64
+    %1 = "llvm.ashr"(%arg1, %0) <{isExact}> : (i64, i64) -> i64
+    %2 = "llvm.lshr"(%1, %arg1) : (i64, i64) -> i64
+    %3 = "llvm.select"(%arg0, %2, %2) <{fastmathFlags = #llvm.fastmath<none>}> : (i1, i64, i64) -> i64
+    "func.return"(%3) : (i64) -> ()
+  }): () -> ()
+}) : () -> ()

@@ -1,0 +1,20 @@
+"builtin.module"() ({
+  ^bb4():
+    "func.func"() <{"function_type" = () -> i1, "sym_name" = "func0"}> ({
+      ^bb6(%arg6_0 : i64, %arg6_1 : i64):
+        %27 = "builtin.unrealized_conversion_cast"(%arg6_0) : (i64) -> !riscv.reg
+        %28 = "builtin.unrealized_conversion_cast"(%arg6_1) : (i64) -> !riscv.reg
+        %29 = "riscv.xor"(%28, %27) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %30 = "riscv.sltiu"(%29) {immediate = 1 : si12} : (!riscv.reg) -> !riscv.reg
+        %31 = "builtin.unrealized_conversion_cast"(%30) : (!riscv.reg) -> i1
+        %23 = "builtin.unrealized_conversion_cast"(%arg6_1) : (i64) -> !riscv.reg
+        %24 = "builtin.unrealized_conversion_cast"(%arg6_0) : (i64) -> !riscv.reg
+        %25 = "riscv.xor"(%24, %23) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %18 = "builtin.unrealized_conversion_cast"(%31) : (i1) -> !riscv.reg
+        %19 = "riscv.czero.eqz"(%25, %18) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %20 = "riscv.czero.nez"(%25, %18) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %21 = "riscv.or"(%19, %20) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %15 = "builtin.unrealized_conversion_cast"(%21) : (!riscv.reg) -> i1
+        "func.return"(%15) : (i1) -> ()
+    }) : () -> ()
+}) : () -> ()

@@ -1,0 +1,17 @@
+"builtin.module"() ({
+  ^bb4():
+    "func.func"() <{"function_type" = () -> i64, "sym_name" = "func0"}> ({
+      ^bb6(%arg6_0 : i64, %arg6_1 : i64, %arg6_2 : i64):
+        %28 = "builtin.unrealized_conversion_cast"(%arg6_0) : (i64) -> !riscv.reg
+        %29 = "builtin.unrealized_conversion_cast"(%arg6_1) : (i64) -> !riscv.reg
+        %30 = "riscv.and"(%29, %28) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %27 = "builtin.unrealized_conversion_cast"(%30) : (!riscv.reg) -> i32
+        %23 = "builtin.unrealized_conversion_cast"(%27) : (i32) -> !riscv.reg
+        %24 = "riscv.sext.w"(%23) : (!riscv.reg) -> !riscv.reg
+        %19 = "builtin.unrealized_conversion_cast"(%arg6_2) : (i64) -> !riscv.reg
+        %21 = "riscv.srl"(%19, %30) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %17 = "riscv.div"(%24, %21) : (!riscv.reg, !riscv.reg) -> !riscv.reg
+        %18 = "builtin.unrealized_conversion_cast"(%17) : (!riscv.reg) -> i64
+        "func.return"(%18) : (i64) -> ()
+    }) : () -> ()
+}) : () -> ()
