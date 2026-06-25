@@ -1,6 +1,6 @@
 [submodule "xdsl"]
 	path = xdsl
-	url = https://github.com/xdsl/xdsl.git
+	url = https://github.com/xdslproject/xdsl.git
 [submodule "veir"]
 	path = veir
 	url = https://github.com/opencompl/veir.git
