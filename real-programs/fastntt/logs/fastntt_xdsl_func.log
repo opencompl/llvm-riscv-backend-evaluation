@@ -1,0 +1,87 @@
+Traceback (most recent call last):
+  File "/home/lc985/llvm-riscv-backend-evaluation/benchmarks/create_func.py", line 64, in <module>
+    main()
+    ~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/benchmarks/create_func.py", line 60, in main
+    MyOptMain().run()
+    ~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/benchmarks/create_func.py", line 44, in run
+    module = self.parse_chunk(chunk, file_extension, offset)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/tools/command_line_tool.py", line 110, in parse_chunk
+    return self.available_frontends[file_extension](chunk)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/tools/command_line_tool.py", line 98, in parse_mlir
+    ).parse_module(not self.args.no_implicit_module)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 134, in parse_module
+    if (parsed_op := self.parse_optional_operation()) is not None:
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 690, in parse_optional_operation
+    return self.parse_operation()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 729, in parse_operation
+    op = self._parse_generic_operation(op_type)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 874, in _parse_generic_operation
+    regions = self.parse_region_list()
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 621, in parse_region_list
+    return self.parse_comma_separated_list(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.Delimiter.PAREN, self.parse_region, " in operation region list"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/generic_parser.py", line 211, in parse_comma_separated_list
+    elems = [parse()]
+             ~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 608, in parse_region
+    region = self.parse_optional_region(arguments)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 572, in parse_optional_region
+    block = self._parse_block()
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 261, in _parse_block
+    self._parse_block_body(block)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 224, in _parse_block_body
+    while (op := self.parse_optional_operation()) is not None:
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 690, in parse_optional_operation
+    return self.parse_operation()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 729, in parse_operation
+    op = self._parse_generic_operation(op_type)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 874, in _parse_generic_operation
+    regions = self.parse_region_list()
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 621, in parse_region_list
+    return self.parse_comma_separated_list(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.Delimiter.PAREN, self.parse_region, " in operation region list"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/generic_parser.py", line 211, in parse_comma_separated_list
+    elems = [parse()]
+             ~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 608, in parse_region
+    region = self.parse_optional_region(arguments)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 572, in parse_optional_region
+    block = self._parse_block()
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 261, in _parse_block
+    self._parse_block_body(block)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 224, in _parse_block_body
+    while (op := self.parse_optional_operation()) is not None:
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 690, in parse_optional_operation
+    return self.parse_operation()
+           ~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 726, in parse_operation
+    op_type = self._get_op_by_name(op_name)
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/core.py", line 761, in _get_op_by_name
+    self.raise_error(f"Operation {name} is not registered")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lc985/llvm-riscv-backend-evaluation/xdsl/xdsl/parser/generic_parser.py", line 94, in raise_error
+    raise ParseError(at_position, msg)
+xdsl.utils.exceptions.ParseError: /home/lc985/llvm-riscv-backend-evaluation/real-programs/fastntt/fastntt_veir.mlir:14:24
+        "riscv_cf.bnez"(%113) [^bb11, ^bb12] <{"operandSegmentSizes" = array<i32: 1, 0, 0>}> : (!riscv.reg) -> ()
+                       ^
+                       Operation riscv_cf.bnez is not registered
+
