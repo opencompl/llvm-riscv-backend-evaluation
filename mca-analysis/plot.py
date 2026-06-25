@@ -380,7 +380,7 @@ def bar_plot(parameter, selector1, selector2):
     )
 
     # Ensure all classes are present for consistent coloring/order
-    class_order = ["<1x", "1x", "1x-1.5x", "1.5x-2x", ">2x"]
+    class_order = ["<1x","1x","1x-1.5x", "1.5x-2x", ">2x"]
 
     # for c in class_order:
     #     if c not in group.columns:
@@ -1004,9 +1004,9 @@ def main():
 
     numeric_params = [p for p in params_to_evaluate if p != "similarity"]
     for parameter in numeric_params:
-        if "stacked" in plots_to_produce or "all" in plots_to_produce:
-            bar_plot(parameter, "VEIR", "LLVM_globalisel")
-            bar_plot(parameter, "VEIR", "LLVM_selectiondag")
+        # if "stacked" in plots_to_produce or "all" in plots_to_produce:
+            # bar_plot(parameter, "VEIR", "LLVM_globalisel")
+            # bar_plot(parameter, "VEIR", "LLVM_selectiondag")
         if "violin" in plots_to_produce or "all" in plots_to_produce:
             violin_plot(parameter, "VEIR", "LLVM_globalisel")
             violin_plot(parameter, "VEIR", "LLVM_selectiondag")
@@ -1016,7 +1016,7 @@ def main():
             proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
 
     geomean_plot_tot_cycles()
-    equivalent_plot_perc()
+    # equivalent_plot_perc()
     create_latex_command(['tot_cycles', 'tot_instructions'], plots_dir + 'numerical_commands.tex')
     
 if __name__ == "__main__":
