@@ -116,6 +116,26 @@ def rewrite_value_attr_to_immediate(file_path):
         content,
     )
     content = re.sub(
+        r'(riscv\.slti\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r"\1 {immediate = \3 : si12}",
+        content,
+    )
+    content = re.sub(
+        r'(riscv\.slli\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r"\1 {immediate = \3 : si12}",
+        content,
+    )
+    content = re.sub(
+        r'(riscv\.srai\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r"\1 {immediate = \3 : si12}",
+        content,
+    )
+    content = re.sub(
+        r'(riscv\.ori\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r"\1 {immediate = \3 : si12}",
+        content,
+    )
+    content = re.sub(
         r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
         r'rv64.li"\1 {immediate = \2 : i64}',
         content,
