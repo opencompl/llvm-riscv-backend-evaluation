@@ -96,6 +96,8 @@ def sanitize(file_path):
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
     content = content.replace("czeronez", "czero.nez")
+    
+    
     with open(file_path, "w") as f:
         f.write(content)
 
@@ -115,7 +117,7 @@ def rewrite_value_attr_to_immediate(file_path):
     )
     content = re.sub(
         r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
-        r'riscv.lui"\1 {immediate = \2 : i20}',
+        r'rv64.li"\1 {immediate = \2 : i64}',
         content,
     )
     content = re.sub(
