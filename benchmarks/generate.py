@@ -96,8 +96,26 @@ def sanitize(file_path):
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
     content = content.replace("czeronez", "czero.nez")
-    
-    
+
+
+    with open(file_path, "w") as f:
+        f.write(content)
+
+
+def replace_bool_constants(file_path):
+    """Replace boolean literal attributes in llvm.mlir.constant with i1 integers."""
+    with open(file_path, "r") as f:
+        content = f.read()
+    content = re.sub(
+        r'("llvm\.mlir\.constant"\(\) <\{"value" = )false(\}> : \(\) -> i1)',
+        r'\g<1>0 : i1\2',
+        content,
+    )
+    content = re.sub(
+        r'("llvm\.mlir\.constant"\(\) <\{"value" = )true(\}> : \(\) -> i1)',
+        r'\g<1>1 : i1\2',
+        content,
+    )
     with open(file_path, "w") as f:
         f.write(content)
 
@@ -409,7 +427,7 @@ def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
         from xdsl.xdsl_opt_main import xDSLOptMain
 
         xdsl_opt_main = xDSLOptMain(
-            args=f"{input_file} -p convert-func-to-riscv-func,reconcile-unrealized-casts,riscv-allocate-registers,riscv-lower-parallel-mov -t riscv-asm -o {output_file}".split()
+            args=f"{input_file} -p convert-func-to-riscv-func,reconcile-unrealized-casts,riscv-allocate-registers{{force-infinite=true}},riscv-allocate-infinite-registers,canonicalize-register-allocation -t riscv-asm -o {output_file}".split()
         )
         xdsl_opt_main.run()
         # cmd = cmd_base + input_file + " > " + output_file
@@ -597,6 +615,9 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
             float(idx) / float(len(os.listdir(MLIR_OPTIMIZED_DIR_PATH)))
         ) * 100
         print(f"extracting the first basic block: {percentage:.2f}%")
+
+    for filename in os.listdir(MLIR_bb0_VEIR_DIR_PATH):
+        replace_bool_constants(os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename))
 
     # LAKE_file2ret = dict()
     # # Run the lean pass in parallel
