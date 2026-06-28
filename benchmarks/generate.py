@@ -71,10 +71,15 @@ AUTOGEN_DIR_PATHS = [
 
 
 def cleanup_empty_logs():
+    err = 0
     for filename in os.listdir(LOGS_DIR_PATH):
         log_path = os.path.join(LOGS_DIR_PATH, filename)
         if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
             os.remove(log_path)
+        else: 
+            err +=1
+            print(log_path)
+    print(f"Found {err} errors throughout the pipeline.")
 
 
 def setup_benchmarking_directories():
@@ -123,49 +128,28 @@ def replace_bool_constants(file_path):
 def rewrite_value_attr_to_immediate(file_path):
     with open(file_path, "r") as f:
         content = f.read()
-    content = re.sub(
-        r'(riscv\.xori\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.bclri\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.sltiu\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.slti\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.slli\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.srai\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
-    content = re.sub(
-        r'(riscv\.ori\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r"\1 {immediate = \3 : si12}",
-        content,
-    )
+    # riscv.li is renamed to rv64.li and takes a 64-bit immediate
     content = re.sub(
         r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
         r'rv64.li"\1 {immediate = \2 : i64}',
         content,
     )
+    # riscv.srli takes a 20-bit immediate
     content = re.sub(
-        r'riscv\.srli\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
-        r'riscv.srli"\1 {immediate = \2 : i20}',
+        r'(riscv\.srli\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : i20}',
+        content,
+    )
+    # riscv.bclri takes a 6-bit immediate
+    content = re.sub(
+        r'(riscv\.bclri\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : ui6}',
+        content,
+    )
+    # all other riscv ops with a value attribute take a 12-bit signed immediate
+    content = re.sub(
+        r'(riscv\.\w+\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : si12}',
         content,
     )
     with open(file_path, "w") as f:
