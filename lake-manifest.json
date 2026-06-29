@@ -13,7 +13,7 @@
    "name": "ExArray",
    "manifestFile": "lake-manifest.json",
    "inherited": true,
-   "dir": "../veir/ExArray",
+   "dir": "veir/ExArray",
    "configFile": "lakefile.lean"}],
  "name": "Bugs",
  "lakeDir": ".lake",
