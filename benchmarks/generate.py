@@ -651,32 +651,32 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     build_log = open(os.path.join(LOGS_DIR_PATH, "veir2mir_build.log"), "w")
     run_command(f"cd {ROOT_DIR_PATH}/veir && lake build veir2mir", build_log)
 
-    # veir2mir_file2ret = dict()
-    # idx = 0
-    # for filename in os.listdir(VEIR_ASM_DIR_PATH):
-    #     input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-    #     basename, _ = os.path.splitext(filename)
-    #     output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
-    #     log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
-    #     veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
-    #     idx += 1
-    #     percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
-    #     print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
+    veir2mir_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_ASM_DIR_PATH):
+        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
+        log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
+        veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
+        print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
 
-    # veir_regalloc_file2ret = dict()
-    # idx = 0
-    # for filename in os.listdir(VEIR_MIR_DIR_PATH):
-    #     input_file = os.path.join(VEIR_MIR_DIR_PATH, filename)
-    #     if veir2mir_file2ret.get(input_file) == 0:
-    #         basename, _ = os.path.splitext(filename)
-    #         output_file = os.path.join(VEIR_REGALLOC_ASM_DIR_PATH, basename + ".s")
-    #         log_file = open(
-    #             os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
-    #         )
-    #         LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
-    #     idx += 1
-    #     percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
-    #     print(f"register allocating veir MIR with llc: {percentage:.2f}%")
+    veir_regalloc_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_MIR_DIR_PATH):
+        input_file = os.path.join(VEIR_MIR_DIR_PATH, filename)
+        if veir2mir_file2ret.get(input_file) == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(VEIR_REGALLOC_ASM_DIR_PATH, basename + ".s")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
+            )
+            LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
+        print(f"register allocating veir MIR with llc: {percentage:.2f}%")
 
     XDSL_create_func_file2ret_opt = dict()
     idx = 0
