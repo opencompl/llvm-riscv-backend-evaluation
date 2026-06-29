@@ -60,7 +60,6 @@ jobs:
       - name: Set up Veir
         run: |
           git submodule update --init -- veir
-          cd veir 
           
       - name: Build the project
         uses: leanprover/lean-action@v1
