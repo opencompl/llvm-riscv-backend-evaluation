@@ -32,6 +32,7 @@ jobs:
           sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
           sudo ln -s /usr/bin/llc-22 /usr/bin/llc
           sudo ln -s /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
+          sudo ln -s /usr/bin/opt-22 /usr/bin/opt
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
