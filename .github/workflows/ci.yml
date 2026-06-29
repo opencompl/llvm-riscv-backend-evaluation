@@ -45,6 +45,5 @@ jobs:
       - name: Run a multi-line script
         run: |
           git submodule update --init -- veir xdsl
-          info "Setting up xDSL virtualenv..."
           uv venv "$XDSL_VENV" --python python3
           uv pip install --python "$XDSL_VENV" -e "$XDSL_SRC"
