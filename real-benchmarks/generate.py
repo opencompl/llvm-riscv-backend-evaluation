@@ -28,8 +28,6 @@ from generate import (
     LLC_selectiondag,
     LLC_globalisel,
     VEIR,
-    XDSL_create_func,
-    XDSL_regalloc,
     sanitize,
     rewrite_value_attr_to_immediate,
     extract_basic_block,
@@ -68,10 +66,6 @@ LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLVM_preopt/"
 
 MLIR_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/MLIR_preopt/"
 
-XDSL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/XDSL_ASM/"
-
-XDSL_FUNC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/XDSL_FUNC/"
-
 LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/logs/"
 
 AUTOGEN_DIR_PATHS = [
@@ -81,9 +75,7 @@ AUTOGEN_DIR_PATHS = [
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
-    XDSL_FUNC_ASM_DIR_PATH,
     VEIR_ASM_DIR_PATH,
-    XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
     MLIR_OPTIMIZED_DIR_PATH,
@@ -273,59 +265,6 @@ def generate_real_benchmarks(llvm_o2=False):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         sanitize(input_file)
         rewrite_value_attr_to_immediate(input_file)
-
-    XDSL_create_func_file2ret_opt = dict()
-    idx = 0
-    # Create `func.func`
-    for filename in os.listdir(VEIR_ASM_DIR_PATH):
-        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        if LAKE_file2ret_opt[input_file] == 0:
-            rename_numeric_block_labels(input_file)
-            basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, basename + ".mlir")
-            log_file = open(
-                os.path.join(LOGS_DIR_PATH, basename + "_xdsl_create_func_opt.log"), "w"
-            )
-            XDSL_create_func(
-                input_file, output_file, log_file, XDSL_create_func_file2ret_opt
-            )
-        idx += 1
-        percentage = (float(idx) / float(len(LAKE_file2ret_opt))) * 100
-        print(f"creating func.func module (opt): {percentage:.2f}%")
-
-    # XDSL_reg_alloc_file2ret = dict()
-    # idx = 0
-    # # Register allocation with XDSL
-    # for filename in os.listdir(XDSL_FUNC_ASM_DIR_PATH):
-    #     input_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, filename)
-    #     if XDSL_create_func_file2ret[input_file] == 0:
-    #         basename, _ = os.path.splitext(filename)
-    #         output_file = os.path.join(XDSL_ASM_DIR_PATH, basename + ".mlir")
-    #         log_file = open(
-    #             os.path.join(LOGS_DIR_PATH, basename + "_xdsl_reg_alloc.log"), "w"
-    #         )
-    #         XDSL_reg_alloc(input_file, output_file, log_file, XDSL_reg_alloc_file2ret)
-    #     idx += 1
-    #     percentage = (float(idx) / float(len(XDSL_create_func_file2ret))) * 100
-    #     print(f"allocating registers and outputting assembly: {percentage:.2f}%")
-
-    XDSL_reg_alloc_file2ret_opt = dict()
-    idx = 0
-    # Register allocation with XDSL
-    for filename in os.listdir(XDSL_FUNC_ASM_DIR_PATH):
-        input_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, filename)
-        if XDSL_create_func_file2ret_opt[input_file] == 0:
-            basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(XDSL_ASM_DIR_PATH, basename + ".mlir")
-            log_file = open(
-                os.path.join(LOGS_DIR_PATH, basename + "_xdsl_reg_alloc.log"), "w"
-            )
-            XDSL_regalloc(
-                input_file, output_file, log_file, XDSL_reg_alloc_file2ret_opt
-            )
-        idx += 1
-        percentage = (float(idx) / float(len(XDSL_create_func_file2ret_opt))) * 100
-        print(f"allocating registers and outputting assembly (opt): {percentage:.2f}%")
 
     cleanup_empty_logs(LOGS_DIR_PATH)
 
