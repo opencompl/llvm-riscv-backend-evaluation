@@ -53,11 +53,12 @@ jobs:
       - name: Set up XDSL
         run: |
           mkdir build
-          git submodule update --init -- veir xdsl
+          git submodule update --init -- xdsl
           uv venv build/xdsl-venv --python python3
           uv pip install --python build/xdsl-venv -e xdsl
       
       - name: Set up Veir
         run: |
+          git submodule update --init -- veir
           cd veir 
           lake build
