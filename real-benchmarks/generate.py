@@ -289,13 +289,11 @@ def generate_real_benchmarks():
         percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
         print(f"register allocating veir MIR with llc: {percentage:.2f}%")
 
-    cleanup_empty_logs(LOGS_DIR_PATH)
-
+    return cleanup_empty_logs(LOGS_DIR_PATH)
 
 
 def main():
-
-    generate_real_benchmarks()
+    sys.exit(generate_real_benchmarks())
 
 
 if __name__ == "__main__":

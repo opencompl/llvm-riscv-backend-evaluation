@@ -39,6 +39,7 @@ jobs:
         with:
           python-version: '3.12'
           enable-cache: true
+          cache-suffix: ${{ hashFiles('xdsl/pyproject.toml', 'xdsl/xdsl/dialects/riscv/ops.py') }}
 
       - name: Set up XDSL
         run: |

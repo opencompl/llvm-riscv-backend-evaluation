@@ -85,7 +85,7 @@ def cleanup_empty_logs(LOGS_DIR_PATH):
         else: 
             err +=1
             print(log_path)
-    print(f"Found {err} errors throughout the pipeline.")
+    return err
 
 
 def setup_benchmarking_directories(AUTOGEN_DIR_PATHS):
@@ -728,7 +728,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
         percentage = (float(idx) / float(len(XDSL_create_func_file2ret_opt))) * 100
         print(f"allocating registers and outputting assembly (opt): {percentage:.2f}%")
 
-    cleanup_empty_logs(LOGS_DIR_PATH)
+    return cleanup_empty_logs(LOGS_DIR_PATH)
 
 
 def main():
@@ -763,7 +763,7 @@ def main():
 
     args = parser.parse_args()
 
-    generate_benchmarks(args.num, args.jobs, args.llvm_opt, args.instruction_lowering)
+    sys.exit(generate_benchmarks(args.num, args.jobs, args.llvm_opt, args.instruction_lowering))
 
 
 if __name__ == "__main__":

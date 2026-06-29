@@ -19,12 +19,9 @@ LLC_ASM_selectiondag_DIR = (
 )
 LLC_ASM_DIR = f"{ROOT_DIR}/benchmarks/LLC_ASM/"
 XDSL_ASM_DIR = f"{ROOT_DIR}/benchmarks/XDSL_ASM/"
-XDSL_ASM_DIR = (
-    f"{ROOT_DIR}/benchmarks/XDSL_ASM/"
-)
-MCA_VEIR_DIR = (
-    f"{ROOT_DIR}/mca-analysis/results/VEIR/"
-)
+VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/benchmarks/VEIR_REGALLOC_ASM/"
+MCA_VEIR_XDSL_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_xdsl/"
+MCA_VEIR_LLVM_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_llvm/"
 
 MCA_LLVM_globalisel_DIR = f"{ROOT_DIR}/mca-analysis/results/LLVM_globalisel/"
 MCA_LLVM_selectiondag_DIR = f"{ROOT_DIR}/mca-analysis/results/LLVM_selectiondag/"
@@ -32,7 +29,8 @@ LOGS_DIR = f"{ROOT_DIR}/mca-analysis/results/logs/"
 
 
 AUTOGEN_DIR_PATHS = [
-    MCA_VEIR_DIR,
+    MCA_VEIR_XDSL_DIR,
+    MCA_VEIR_LLVM_DIR,
     MCA_LLVM_globalisel_DIR,
     MCA_LLVM_selectiondag_DIR,
     LOGS_DIR,
@@ -83,12 +81,23 @@ def run_tests():
     for filename in os.listdir(XDSL_ASM_DIR):
         input_file = os.path.join(XDSL_ASM_DIR, filename)
         basename, _ = os.path.splitext(filename)
-        output_file = os.path.join(MCA_VEIR_DIR, basename + '.out')
-        log_file = open(os.path.join(LOGS_DIR, 'xdsl_' + filename),'w')
+        output_file = os.path.join(MCA_VEIR_XDSL_DIR, basename + '.out')
+        log_file = open(os.path.join(LOGS_DIR, 'veir_xdsl_' + filename), 'w')
         mca_analysis(input_file, output_file, log_file)
         idx += 1
         percentage = ((float(idx) + float(1)) / float(len(os.listdir(XDSL_ASM_DIR)))) * 100
-        print(f"running mca analysis on veir asm: {percentage:.2f}%")
+        print(f"running mca analysis on veir-xdsl asm: {percentage:.2f}%")
+
+    idx = 0
+    for filename in os.listdir(VEIR_REGALLOC_ASM_DIR):
+        input_file = os.path.join(VEIR_REGALLOC_ASM_DIR, filename)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(MCA_VEIR_LLVM_DIR, basename + '.out')
+        log_file = open(os.path.join(LOGS_DIR, 'veir_llvm_' + filename), 'w')
+        mca_analysis(input_file, output_file, log_file)
+        idx += 1
+        percentage = ((float(idx) + float(1)) / float(len(os.listdir(VEIR_REGALLOC_ASM_DIR)))) * 100
+        print(f"running mca analysis on veir-llvm asm: {percentage:.2f}%")
 
     idx = 0
     for filename in os.listdir(LLC_ASM_globalisel_DIR):
