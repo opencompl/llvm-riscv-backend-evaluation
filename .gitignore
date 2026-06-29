@@ -30,5 +30,5 @@ real-benchmarks/LLVM_preopt
 real-benchmarks/MLIR_multi
 real-benchmarks/MLIR_single
 real-benchmarks/VEIR_ASM
-real-benchmarks/XDSL_FUNC
-real-benchmarks/XDSL_ASM
+real-benchmarks/VEIR_MIR
+real-benchmarks/VEIR_REGALLOC_ASM
