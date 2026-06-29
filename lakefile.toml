@@ -1,10 +1,10 @@
 name = "Bugs"
 version = "0.1.0"
+defaultTargets = ["Bugs"]
 
 [[require]]
 name = "VeIR"
-path = "../veir"
+path = "veir"
 
 [[lean_lib]]
 name = "Bugs"
-root = "bugs"

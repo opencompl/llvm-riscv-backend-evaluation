@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add LLVM apt repository
+        uses: gerlero/add-apt-repository@v1
+        with:
+          uri: http://apt.llvm.org/noble/
+          key: https://apt.llvm.org/llvm-snapshot.gpg.key
+          component: main
+          suite: llvm-toolchain-noble-22
+
+      - name: Install LLVM/MLIR tools
+        uses: gerlero/apt-install@v1
+        with:
+          packages: mlir-22-tools llvm-22
+
+      - name: Add tool symlinks
+        run: |
+          sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
+          sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
+          sudo ln -s /usr/bin/llc-22 /usr/bin/llc
+          sudo ln -s /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
+          sudo ln -s /usr/bin/opt-22 /usr/bin/opt
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          enable-cache: true
+
+      - name: Set up XDSL
+        run: |
+          mkdir build
+          git submodule update --init -- xdsl
+          uv venv build/xdsl-venv --python python3
+          uv pip install --python build/xdsl-venv -e xdsl
+          echo "$GITHUB_WORKSPACE/build/xdsl-venv/bin" >> $GITHUB_PATH
+
+      - name: Get Veir version for cache key
+        id: veir-version
+        run: echo "hash=$(git rev-parse HEAD:veir)" >> $GITHUB_OUTPUT
+
+      - name: Restore Veir build cache
+        uses: actions/cache@v4
+        with:
+          path: veir/.lake
+          key: veir-${{ steps.veir-version.outputs.hash }}-${{ hashFiles('lean-toolchain') }}
+
+      - name: Set up Veir
+        run: git submodule update --init -- veir
+
+      - name: Build Veir
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "--iofail"
+          test: false
+          lake-package-directory: "veir"
+
+      - name: Build Bugs
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "--iofail"
+          test: false
+
+      - name: Generate benchmarks
+        run: uv run benchmarks/generate.py -j 4
+
+      - name: Run MCA analysis
+        run: python3 mca-analysis/run_mca.py
+
+      - name: Plot results
+        run: uv run --with pandas --with matplotlib --with numpy --with num2words mca-analysis/plot.py
+
+      - name: Upload plots
+        uses: actions/upload-artifact@v4
+        with:
+          name: mca-plots
+          path: |
+            mca-analysis/plots/
+            mca-analysis/data/
+
+      - name: Convert plots to PNG
+        if: github.event_name == 'pull_request'
+        run: |
+          sudo apt-get install -y poppler-utils
+          pdftoppm -r 150 -png \
+            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.pdf \
+            /tmp/tot_cycles_globalisel_plot
+          pdftoppm -r 150 -png \
+            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.pdf \
+            /tmp/tot_cycles_selectiondag_plot
+
+      - name: Post PR comment with plots
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs')
+
+            const pngContent1 = fs.readFileSync('/tmp/tot_cycles_globalisel_plot-1.png', { encoding: 'base64' })
+            const pngContent2 = fs.readFileSync('/tmp/tot_cycles_selectiondag_plot-1.png', { encoding: 'base64' })
+            const assetPath1 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.png`
+            const assetPath2 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.png`
+
+            // Ensure ci-assets branch exists, creating it from the default branch if not
+            try {
+              await github.rest.repos.getBranch({ owner: context.repo.owner, repo: context.repo.repo, branch: 'ci-assets' })
+            } catch (_) {
+              const { data: head } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: context.payload.repository.default_branch,
+              })
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/heads/ci-assets',
+                sha: head.commit.sha,
+              })
+            }
+
+            // Get existing file SHA if present (required for updates)
+            let sha1
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: assetPath1,
+                ref: 'ci-assets',
+              })
+              sha1 = data.sha
+            } catch (_) {}
+
+            let sha2
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: assetPath2,
+                ref: 'ci-assets',
+              })
+              sha2 = data.sha
+            } catch (_) {}
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: assetPath1,
+              message: `ci: update plot for PR #${context.issue.number}`,
+              content: pngContent1,
+              branch: 'ci-assets',
+              ...(sha1 && { sha: sha1 }),
+            })
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: assetPath2,
+              message: `ci: update plot for PR #${context.issue.number}`,
+              content: pngContent2,
+              branch: 'ci-assets',
+              ...(sha2 && { sha: sha2 }),
+            })
+
+            const imageUrl1 = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${assetPath1}`
+            const imageUrl2 = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${assetPath2}`
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `![tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel](${imageUrl1})\n\n![tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag](${imageUrl2})`
+            })
