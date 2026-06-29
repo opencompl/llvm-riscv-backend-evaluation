@@ -643,14 +643,6 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     # Run the optimized lean pass in parallel
     VEIR(jobs, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
-    for filename in os.listdir(VEIR_ASM_DIR_PATH):
-        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        sanitize(input_file)
-        rewrite_value_attr_to_immediate(input_file)
-
-    build_log = open(os.path.join(LOGS_DIR_PATH, "veir2mir_build.log"), "w")
-    run_command(f"cd {ROOT_DIR_PATH}/veir && lake build veir2mir", build_log)
-
     veir2mir_file2ret = dict()
     idx = 0
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
@@ -677,6 +669,11 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
         idx += 1
         percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
         print(f"register allocating veir MIR with llc: {percentage:.2f}%")
+
+    for filename in os.listdir(VEIR_ASM_DIR_PATH):
+        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
+        sanitize(input_file)
+        rewrite_value_attr_to_immediate(input_file)
 
     XDSL_create_func_file2ret_opt = dict()
     idx = 0
