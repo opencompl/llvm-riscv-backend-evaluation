@@ -40,6 +40,14 @@ jobs:
           sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt 
           sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
           sudo ln -s /usr/bin/llc-22 /usr/bin/llc
+      
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Optional: Automatically manage and cache a specific Python version
+          python-version: '3.12'
+          # Optional: Enable automatic caching of uv dependencies
+          enable-cache: true
 
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
