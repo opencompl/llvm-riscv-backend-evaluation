@@ -37,9 +37,10 @@ jobs:
 
       - name: Rename MLIR-opt
         run: |
-          sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt 
+          sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
           sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
           sudo ln -s /usr/bin/llc-22 /usr/bin/llc
+          sudo ln -s /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
       
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -67,3 +68,20 @@ jobs:
           build-args: "--iofail"
           test: false
           lake-package-directory: "veir"
+
+      - name: Generate benchmarks
+        run: uv run benchmarks/generate.py -j 4
+
+      - name: Run MCA analysis
+        run: python3 mca-analysis/run_mca.py
+
+      - name: Plot results
+        run: uv run --with pandas --with matplotlib --with numpy --with num2words mca-analysis/plot.py
+
+      - name: Upload plots
+        uses: actions/upload-artifact@v4
+        with:
+          name: mca-plots
+          path: |
+            mca-analysis/plots/
+            mca-analysis/data/
