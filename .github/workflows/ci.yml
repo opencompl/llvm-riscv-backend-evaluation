@@ -57,6 +57,12 @@ jobs:
           test: false
           lake-package-directory: "veir"
 
+      - name: Build Bugs
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "--iofail"
+          test: false
+
       - name: Generate benchmarks
         run: uv run benchmarks/generate.py -j 4
 
