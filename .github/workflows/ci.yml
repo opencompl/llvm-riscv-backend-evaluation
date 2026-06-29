@@ -77,11 +77,20 @@ jobs:
       - name: Generate benchmarks
         run: uv run benchmarks/generate.py -j 4
 
+      - name: Generate real benchmarks
+        run: uv run real-benchmarks/generate.py
+
       - name: Run MCA analysis
         run: python3 mca-analysis/run_mca.py
 
+      - name: Run MCA analysis (real benchmarks)
+        run: python3 mca-analysis-real-benchmarks/run_mca.py
+
       - name: Plot results
         run: uv run --with pandas --with matplotlib --with numpy --with num2words mca-analysis/plot.py
+
+      - name: Generate real benchmark tables
+        run: uv run --with matplotlib mca-analysis-real-benchmarks/table.py
 
       - name: Upload plots
         uses: actions/upload-artifact@v4
@@ -90,6 +99,7 @@ jobs:
           path: |
             mca-analysis/plots/
             mca-analysis/data/
+            mca-analysis-real-benchmarks/data/
 
       - name: Convert plots to PNG
         if: github.event_name == 'pull_request'
@@ -109,10 +119,28 @@ jobs:
           script: |
             const fs = require('fs')
 
-            const pngContent1 = fs.readFileSync('/tmp/tot_cycles_globalisel_plot-1.png', { encoding: 'base64' })
-            const pngContent2 = fs.readFileSync('/tmp/tot_cycles_selectiondag_plot-1.png', { encoding: 'base64' })
-            const assetPath1 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.png`
-            const assetPath2 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.png`
+            const assets = [
+              {
+                file: '/tmp/tot_cycles_globalisel_plot-1.png',
+                path: `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.png`,
+                alt: 'tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel',
+              },
+              {
+                file: '/tmp/tot_cycles_selectiondag_plot-1.png',
+                path: `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.png`,
+                alt: 'tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag',
+              },
+              {
+                file: 'mca-analysis-real-benchmarks/data/tot_instructions_table_real.png',
+                path: `pr-${context.issue.number}/tot_instructions_table_real.png`,
+                alt: 'Real benchmarks — #instructions per iteration',
+              },
+              {
+                file: 'mca-analysis-real-benchmarks/data/num_cycles_table_real.png',
+                path: `pr-${context.issue.number}/num_cycles_table_real.png`,
+                alt: 'Real benchmarks — #cycles per iteration',
+              },
+            ]
 
             // Ensure ci-assets branch exists, creating it from the default branch if not
             try {
@@ -131,55 +159,41 @@ jobs:
               })
             }
 
-            // Get existing file SHA if present (required for updates)
-            let sha1
-            try {
-              const { data } = await github.rest.repos.getContent({
+            const imageUrls = []
+            for (const asset of assets) {
+              const content = fs.readFileSync(asset.file, { encoding: 'base64' })
+
+              let sha
+              try {
+                const { data } = await github.rest.repos.getContent({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path: asset.path,
+                  ref: 'ci-assets',
+                })
+                sha = data.sha
+              } catch (_) {}
+
+              await github.rest.repos.createOrUpdateFileContents({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                path: assetPath1,
-                ref: 'ci-assets',
+                path: asset.path,
+                message: `ci: update plot for PR #${context.issue.number}`,
+                content,
+                branch: 'ci-assets',
+                ...(sha && { sha }),
               })
-              sha1 = data.sha
-            } catch (_) {}
 
-            let sha2
-            try {
-              const { data } = await github.rest.repos.getContent({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path: assetPath2,
-                ref: 'ci-assets',
+              imageUrls.push({
+                url: `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${asset.path}`,
+                alt: asset.alt,
               })
-              sha2 = data.sha
-            } catch (_) {}
+            }
 
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: assetPath1,
-              message: `ci: update plot for PR #${context.issue.number}`,
-              content: pngContent1,
-              branch: 'ci-assets',
-              ...(sha1 && { sha: sha1 }),
-            })
-
-            await github.rest.repos.createOrUpdateFileContents({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: assetPath2,
-              message: `ci: update plot for PR #${context.issue.number}`,
-              content: pngContent2,
-              branch: 'ci-assets',
-              ...(sha2 && { sha: sha2 }),
-            })
-
-            const imageUrl1 = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${assetPath1}`
-            const imageUrl2 = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${assetPath2}`
-
+            const body = imageUrls.map(({ url, alt }) => `![${alt}](${url})`).join('\n\n')
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `![tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel](${imageUrl1})\n\n![tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag](${imageUrl2})`
+              body,
             })
