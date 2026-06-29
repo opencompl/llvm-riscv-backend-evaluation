@@ -5,6 +5,6 @@ version = "0.1.0"
 name = "VeIR"
 path = "../veir"
 
-[[lean_lib]]
+[[require]]
 name = "Bugs"
 root = "bugs"

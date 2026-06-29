@@ -61,4 +61,10 @@ jobs:
         run: |
           git submodule update --init -- veir
           cd veir 
-          lake build
+          
+      - name: Build the project
+        uses: leanprover/lean-action@v1
+        with:
+          build-args: "--iofail"
+          test: false
+          lake-package-directory: "veir"
