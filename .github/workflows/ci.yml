@@ -21,10 +21,26 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
+      
+      - name: Add LLVM apt repository
+        uses: gerlero/add-apt-repository@v1
+        with:
+          uri: http://apt.llvm.org/noble/ 
+          key: https://apt.llvm.org/llvm-snapshot.gpg.key
+          component: main
+          suite: llvm-toolchain-noble-22
+
+      - name: Install mlir-opt
+        uses: gerlero/apt-install@v1
+        with:
+          packages: mlir-22-tools
+
+      - name: Rename MLIR-opt
+        run: |
+          sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
 
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
-          git submodule update --init --depth 1 -- llvm-project
           git submodule update --init -- veir xdsl
           ./build.sh
