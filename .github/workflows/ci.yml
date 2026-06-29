@@ -1,67 +1,55 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
   push:
   pull_request:
   merge_group:
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-      
+
       - name: Add LLVM apt repository
         uses: gerlero/add-apt-repository@v1
         with:
-          uri: http://apt.llvm.org/noble/ 
+          uri: http://apt.llvm.org/noble/
           key: https://apt.llvm.org/llvm-snapshot.gpg.key
           component: main
           suite: llvm-toolchain-noble-22
 
-      - name: Install mlir-opt
+      - name: Install LLVM/MLIR tools
         uses: gerlero/apt-install@v1
         with:
           packages: mlir-22-tools llvm-22
 
-      - name: Rename MLIR-opt
+      - name: Add tool symlinks
         run: |
           sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
           sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
           sudo ln -s /usr/bin/llc-22 /usr/bin/llc
           sudo ln -s /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
-      
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
-          # Optional: Automatically manage and cache a specific Python version
           python-version: '3.12'
-          # Optional: Enable automatic caching of uv dependencies
           enable-cache: true
 
-      # Runs a set of commands using the runners shell
       - name: Set up XDSL
         run: |
           mkdir build
           git submodule update --init -- xdsl
           uv venv build/xdsl-venv --python python3
           uv pip install --python build/xdsl-venv -e xdsl
-      
+          echo "$GITHUB_WORKSPACE/build/xdsl-venv/bin" >> $GITHUB_PATH
+
       - name: Set up Veir
-        run: |
-          git submodule update --init -- veir
-          
+        run: git submodule update --init -- veir
+
       - name: Build Veir
         uses: leanprover/lean-action@v1
         with:
@@ -85,8 +73,8 @@ jobs:
           path: |
             mca-analysis/plots/
             mca-analysis/data/
-      
-      - name: Convert plot to PNG
+
+      - name: Convert plots to PNG
         if: github.event_name == 'pull_request'
         run: |
           sudo apt-get install -y poppler-utils
@@ -97,8 +85,9 @@ jobs:
             mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.pdf \
             /tmp/tot_cycles_selectiondag_plot
 
-      - uses: actions/github-script@v6
+      - name: Post PR comment with plots
         if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs')
