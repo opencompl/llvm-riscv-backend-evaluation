@@ -70,7 +70,7 @@ AUTOGEN_DIR_PATHS = [
 ]
 
 
-def cleanup_empty_logs():
+def cleanup_empty_logs(LOGS_DIR_PATH):
     err = 0
     for filename in os.listdir(LOGS_DIR_PATH):
         log_path = os.path.join(LOGS_DIR_PATH, filename)
@@ -82,7 +82,7 @@ def cleanup_empty_logs():
     print(f"Found {err} errors throughout the pipeline.")
 
 
-def setup_benchmarking_directories():
+def setup_benchmarking_directories(AUTOGEN_DIR_PATHS):
     """
     Create clean directories to store the benchmarks.
     """
@@ -100,8 +100,7 @@ def sanitize(file_path):
     content = content.replace("sextw", "sext.w")
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
-    content = content.replace("czeronez", "czero.nez")
-
+    content = content.replace("czeroeqz", "czero.eqz")
 
     with open(file_path, "w") as f:
         f.write(content)
@@ -132,6 +131,12 @@ def rewrite_value_attr_to_immediate(file_path):
     content = re.sub(
         r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
         r'rv64.li"\1 {immediate = \2 : i64}',
+        content,
+    )
+    # riscv.ld is renamed to rv64.ld with offset(base) custom format
+    content = re.sub(
+        r'"riscv\.ld"\(([^)]*)\) <\{"value" = (-?\d+) : i64\}>',
+        r'rv64.ld \2(\1)',
         content,
     )
     # riscv.srli takes a 20-bit immediate
@@ -372,7 +377,7 @@ def extract_basic_block(input_file, output_file, log_file):
         o_f.write("}) : () -> ()\n")
 
 
-def VEIR(jobs, pass_dict):
+def VEIR(jobs, pass_dict, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH):
     """
     Lower the input file to RISCV with VeIR, using multiple threads.
     """
@@ -428,7 +433,7 @@ def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
 
 
 def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
-    setup_benchmarking_directories()
+    setup_benchmarking_directories(AUTOGEN_DIR_PATHS)
 
     if compare_lowering_patterns:
         print(
@@ -614,7 +619,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
 
     LAKE_file2ret_opt = dict()
     # Run the optimized lean pass in parallel
-    VEIR(jobs, LAKE_file2ret_opt)
+    VEIR(jobs, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
@@ -674,7 +679,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
         percentage = (float(idx) / float(len(XDSL_create_func_file2ret_opt))) * 100
         print(f"allocating registers and outputting assembly (opt): {percentage:.2f}%")
 
-    cleanup_empty_logs()
+    cleanup_empty_logs(LOGS_DIR_PATH)
 
 
 def main():

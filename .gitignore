@@ -18,3 +18,17 @@ benchmarks/XDSL_FUNC
 benchmarks/XDSL_ASM
 mca-analysis/results
 .lake/
+real-benchmarks/LLC_ASM_globalisel
+real-benchmarks/LLC_ASM_selectiondag
+real-benchmarks/LLVM
+real-benchmarks/LLVMIR
+real-benchmarks/logs
+real-benchmarks/MLIR_bb0
+real-benchmarks/MLIR_bb0_veir
+real-benchmarks/MLIR_preopt
+real-benchmarks/LLVM_preopt
+real-benchmarks/MLIR_multi
+real-benchmarks/MLIR_single
+real-benchmarks/VEIR_ASM
+real-benchmarks/XDSL_FUNC
+real-benchmarks/XDSL_ASM
