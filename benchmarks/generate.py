@@ -26,42 +26,30 @@ ROOT_DIR_PATH = (
 
 TIMEOUT_SEC = 1800
 
-LLC_GLOBALISEL_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/LLC_GlobalISel_ASM/"
-)
+LLC_GLOBALISEL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_GlobalISel_ASM/"
 
 LLVM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM/"
-LLVMIR_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
-)
+LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
 
-MLIR_bb0_VEIR_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veir/"
+MLIR_bb0_VEIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veir/"
+MLIR_single_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_single/"
+MLIR_multi_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_multi/"
+isolated_instructions_DIR_PATH = (
+    f"{ROOT_DIR_PATH}/compare-lowering-patterns/isolated_instructions/"
 )
-MLIR_single_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_single/"
-)
-MLIR_multi_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_multi/"
-)
-isolated_instructions_DIR_PATH = f"{ROOT_DIR_PATH}/compare-lowering-patterns/isolated_instructions/"
 
 LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_selectiondag/"
 
-LLC_ASM_globalisel_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_globalisel/"
-)
-VEIR_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM/"
-)
+LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_globalisel/"
+VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM/"
 
-XDSL_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/XDSL_ASM/"
-)
+LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM_preopt/"
 
-XDSL_FUNC_ASM_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/XDSL_FUNC/"
-)
+MLIR_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_preopt/"
+
+XDSL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/XDSL_ASM/"
+
+XDSL_FUNC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/XDSL_FUNC/"
 
 LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/logs/"
 
@@ -77,14 +65,21 @@ AUTOGEN_DIR_PATHS = [
     VEIR_ASM_DIR_PATH,
     XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
+    LLVM_OPTIMIZED_DIR_PATH,
+    MLIR_OPTIMIZED_DIR_PATH,
 ]
 
 
 def cleanup_empty_logs():
+    err = 0
     for filename in os.listdir(LOGS_DIR_PATH):
         log_path = os.path.join(LOGS_DIR_PATH, filename)
         if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
             os.remove(log_path)
+        else: 
+            err +=1
+            print(log_path)
+    print(f"Found {err} errors throughout the pipeline.")
 
 
 def setup_benchmarking_directories():
@@ -97,7 +92,8 @@ def setup_benchmarking_directories():
         else:
             shutil.rmtree(directory)
             os.makedirs(directory)
-            
+
+
 def sanitize(file_path):
     with open(file_path, "r") as f:
         content = f.read()
@@ -105,17 +101,60 @@ def sanitize(file_path):
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
     content = content.replace("czeronez", "czero.nez")
+
+
     with open(file_path, "w") as f:
         f.write(content)
+
+
+def replace_bool_constants(file_path):
+    """Replace boolean literal attributes in llvm.mlir.constant with i1 integers."""
+    with open(file_path, "r") as f:
+        content = f.read()
+    content = re.sub(
+        r'("llvm\.mlir\.constant"\(\) <\{"value" = )false(\}> : \(\) -> i1)',
+        r'\g<1>0 : i1\2',
+        content,
+    )
+    content = re.sub(
+        r'("llvm\.mlir\.constant"\(\) <\{"value" = )true(\}> : \(\) -> i1)',
+        r'\g<1>1 : i1\2',
+        content,
+    )
+    with open(file_path, "w") as f:
+        f.write(content)
+
 
 def rewrite_value_attr_to_immediate(file_path):
     with open(file_path, "r") as f:
         content = f.read()
-    content = re.sub(r'(riscv\.xori\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>', r'\1 {immediate = \3 : si12}', content)
-    content = re.sub(r'(riscv\.sltiu\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>', r'\1 {immediate = \3 : si12}', content)
-    content = re.sub(r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>', r'riscv.lui"\1 {immediate = \2 : i20}', content)
+    # riscv.li is renamed to rv64.li and takes a 64-bit immediate
+    content = re.sub(
+        r'riscv\.li\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
+        r'rv64.li"\1 {immediate = \2 : i64}',
+        content,
+    )
+    # riscv.srli takes a 20-bit immediate
+    content = re.sub(
+        r'(riscv\.srli\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : i20}',
+        content,
+    )
+    # riscv.bclri takes a 6-bit immediate
+    content = re.sub(
+        r'(riscv\.bclri\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : ui6}',
+        content,
+    )
+    # all other riscv ops with a value attribute take a 12-bit signed immediate
+    content = re.sub(
+        r'(riscv\.\w+\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
+        r'\1 {immediate = \3 : si12}',
+        content,
+    )
     with open(file_path, "w") as f:
         f.write(content)
+
 
 def replace_hyphens_in_variables(file_path):
     """
@@ -204,7 +243,7 @@ def extract(input_dir, output_base, max_functions, type):
         extract_helper(input_dir, output_base, max_functions, base_name)
 
 
-def MLIR_opt_arith_llvm(input_file, output_file, log_file, pass_dict):
+def MLIR_opt(input_file, output_file, log_file, pass_dict):
     """
     Run mlir-opt and convert a file into LLVM dialect.
     """
@@ -216,7 +255,27 @@ def MLIR_opt_arith_llvm(input_file, output_file, log_file, pass_dict):
     pass_dict[output_file] = ret_code
 
 
-def MLIR_translate_llvmir(input_file, output_file, log_file, pass_dict):
+def LLVM_opt(input_file, output_file, log_file, pass_dict):
+    """
+    Run opt with `O2` on an LLVM file.
+    """
+    cmd_base = "opt -O2 -S "
+    cmd = cmd_base + input_file + " -o " + output_file
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
+
+
+def LLVM_to_MLIR(input_file, output_file, log_file, pass_dict):
+    """
+    Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
+    """
+    cmd_base = "mlir-translate --import-llvm --mlir-print-op-generic "
+    cmd = cmd_base + input_file + " -o " + output_file
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
+
+
+def MLIR_to_LLVM(input_file, output_file, log_file, pass_dict):
     """
     Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
     """
@@ -226,7 +285,7 @@ def MLIR_translate_llvmir(input_file, output_file, log_file, pass_dict):
     pass_dict[output_file] = ret_code
 
 
-def LLC_compile_riscv_selectiondag(input_file, output_file, log_file, pass_dict, opt):
+def LLC_selectiondag(input_file, output_file, log_file, pass_dict, opt):
     """
     Compile LLVMIR to RISCV assembly with llc.
     """
@@ -238,7 +297,7 @@ def LLC_compile_riscv_selectiondag(input_file, output_file, log_file, pass_dict,
     pass_dict[output_file] = ret_code
 
 
-def LLC_compile_riscv_globalisel(input_file, output_file, log_file, pass_dict, opt):
+def LLC_globalisel(input_file, output_file, log_file, pass_dict, opt):
     """
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
@@ -251,50 +310,25 @@ def LLC_compile_riscv_globalisel(input_file, output_file, log_file, pass_dict, o
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
 
+
 def rename_numeric_block_labels(file_path):
     """Rename block labels starting with a digit (e.g. ^4) to ^bb4 in-place."""
     with open(file_path, "r") as f:
         content = f.read()
-    content = re.sub(r'\^(\d+)', r'^bb\1', content)
+    content = re.sub(r"\^(\d+)", r"^bb\1", content)
     with open(file_path, "w") as f:
         f.write(content)
 
 
-def _parse_arg_types(bb0_line):
-    """Extract argument types from a ^bb0(%arg0: type, ...) line."""
-    m = re.match(r'\^bb0\((.*)\)\s*:', bb0_line)
-    if not m or not m.group(1).strip():
-        return []
-    types = []
-    depth = 0
-    current = ""
-    for ch in m.group(1):
-        if ch in "<({":
-            depth += 1
-            current += ch
-        elif ch in ">)}":
-            depth -= 1
-            current += ch
-        elif ch == "," and depth == 0:
-            if ":" in current:
-                types.append(current.split(":", 1)[1].strip())
-            current = ""
-        else:
-            current += ch
-    if current.strip() and ":" in current:
-        types.append(current.split(":", 1)[1].strip())
-    return types
-
-
-def _parse_return_type(llvm_return_line):
+def parse_return_type(llvm_return_line):
     """Extract the function return type from an 'llvm.return' line."""
-    m = re.search(r':\s*\(([^)]*)\)\s*->', llvm_return_line)
+    m = re.search(r":\s*\(([^)]*)\)\s*->", llvm_return_line)
     if m and m.group(1).strip():
         return m.group(1).strip()
     return "()"
 
 
-def extract_bb0_veIR(input_file, output_file, log_file):
+def extract_basic_block(input_file, output_file, log_file):
     """
     Extract the first basic block from the MLIR file, wrap it in a func.func
     inside a builtin.module.
@@ -323,20 +357,22 @@ def extract_bb0_veIR(input_file, output_file, log_file):
     if bb0_line is None:
         return
 
-    ret_type = _parse_return_type(block_lines[-1]) if block_lines else "()"
+    ret_type = parse_return_type(block_lines[-1]) if block_lines else "()"
     func_type = f"() -> {ret_type}"
 
     with open(output_file, "w") as o_f:
         o_f.write('"builtin.module"() ({\n')
-        o_f.write(f'  "func.func"() <{{sym_name = "func0", function_type = {func_type}}}> ({{\n')
-        o_f.write(f'  {bb0_line}\n')
-        for l in block_lines:
-            o_f.write(f'    {l}\n')
-        o_f.write('  }): () -> ()\n')
-        o_f.write('}) : () -> ()\n')
+        o_f.write(
+            f'  "func.func"() <{{sym_name = "func0", function_type = {func_type}}}> ({{\n'
+        )
+        o_f.write(f"  {bb0_line}\n")
+        for line in block_lines:
+            o_f.write(f"    {line}\n")
+        o_f.write("  }): () -> ()\n")
+        o_f.write("}) : () -> ()\n")
 
 
-def LAKE_compile_riscv64(jobs, pass_dict):
+def VEIR(jobs, pass_dict):
     """
     Lower the input file to RISCV with VeIR, using multiple threads.
     """
@@ -348,7 +384,7 @@ def LAKE_compile_riscv64(jobs, pass_dict):
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
-            cmd_base = f"cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p=\"isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine\" "
+            cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" --allow-unregistered-dialect '
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
             futures[future] = output_file
@@ -372,7 +408,7 @@ def XDSL_create_func(input_file, output_file, log_file, pass_dict):
     pass_dict[output_file] = ret_code
 
 
-def XDSL_reg_alloc(input_file, output_file, log_file, pass_dict):
+def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
     """
     Remove unrealized casts from the RISCV64 dialect MLIR files with xdsl.
     """
@@ -380,7 +416,7 @@ def XDSL_reg_alloc(input_file, output_file, log_file, pass_dict):
         from xdsl.xdsl_opt_main import xDSLOptMain
 
         xdsl_opt_main = xDSLOptMain(
-            args=f"{input_file} -p convert-func-to-riscv-func,reconcile-unrealized-casts,riscv-allocate-registers,riscv-lower-parallel-mov -t riscv-asm -o {output_file}".split()
+            args=f"{input_file} -p convert-func-to-riscv-func,reconcile-unrealized-casts,riscv-allocate-registers{{force-infinite=true}},riscv-lower-parallel-mov,riscv-allocate-infinite-registers,canonicalize-register-allocation -t riscv-asm -o {output_file}".split()
         )
         xdsl_opt_main.run()
         # cmd = cmd_base + input_file + " > " + output_file
@@ -414,43 +450,75 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
 
     MLIR_opt_file2ret = dict()
     idx = 0
-    # Run mlir-opt and convert into LLVM dialect
+    # convert `.mlir` files into `.ll` files
     for filename in os.listdir(MLIR_single_DIR_PATH):
         input_file = os.path.join(MLIR_single_DIR_PATH, filename)
         basename, _ = os.path.splitext(filename)
         output_file = os.path.join(LLVM_DIR_PATH, basename + ".ll")
         log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_mlir_opt.log"), "w")
-        MLIR_opt_arith_llvm(input_file, output_file, log_file, MLIR_opt_file2ret)
-        idx += 1
+        MLIR_opt(input_file, output_file, log_file, MLIR_opt_file2ret)
         percentage = (float(idx) / float(len(os.listdir(MLIR_single_DIR_PATH)))) * 100
+        idx += 1
         print(f"translating to LLVM with mlir-opt: {percentage:.2f}%")
 
     MLIR_translate_file2ret = dict()
     idx = 0
-    # Run mlir-translate and convert LLVM into LLVMIR
+    # Run mlir-translate and convert LLVM dialect MLIR into LLVMIR
     for filename in os.listdir(LLVM_DIR_PATH):
         input_file = os.path.join(LLVM_DIR_PATH, filename)
         # only run the lowering if the previous pass was successful:
         if MLIR_opt_file2ret[input_file] == 0:
             basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(LLVMIR_DIR_PATH, basename + ".mlir")
+            output_file = os.path.join(LLVMIR_DIR_PATH, basename + ".ll")
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_mlir_translate.log"), "w"
             )
-            MLIR_translate_llvmir(
-                input_file, output_file, log_file, MLIR_translate_file2ret
-            )
+            MLIR_to_LLVM(input_file, output_file, log_file, MLIR_translate_file2ret)
         idx += 1
         percentage = (float(idx) / float(len(MLIR_opt_file2ret))) * 100
         print(f"translating to LLVMIR with mlir-translate: {percentage:.2f}%")
 
-    LLC_file2ret = dict()
+    LLVM_preopt_file2ret = dict()
     idx = 0
-    # Use llc with `selectionDAG` to compile LLVMIR into RISCV
+    # preoptimize `.ll` files with opt -O2
     for filename in os.listdir(LLVMIR_DIR_PATH):
         input_file = os.path.join(LLVMIR_DIR_PATH, filename)
         # only run the lowering if the previous pass was successful:
         if MLIR_translate_file2ret[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, basename + ".ll")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
+            )
+            LLVM_opt(input_file, output_file, log_file, LLVM_preopt_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
+        print(f"preoptimizing with opt -O2: {percentage:.2f}%")
+
+    MLIR_preopt_file2ret = dict()
+    idx = 0
+    # Import optimized LLVM IR back to MLIR for VeIR bb0 extraction
+    for filename in os.listdir(LLVM_OPTIMIZED_DIR_PATH):
+        input_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, filename)
+        # only run the lowering if the previous pass was successful:
+        if LLVM_preopt_file2ret[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(MLIR_OPTIMIZED_DIR_PATH, basename + ".mlir")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_import_llvm.log"), "w"
+            )
+            LLVM_to_MLIR(input_file, output_file, log_file, MLIR_preopt_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(LLVM_preopt_file2ret))) * 100
+        print(f"importing optimized LLVM IR to MLIR: {percentage:.2f}%")
+
+    LLC_file2ret = dict()
+    idx = 0
+    # Use llc with `selectionDAG` to compile preoptimized LLVMIR into RISCV
+    for filename in os.listdir(LLVM_OPTIMIZED_DIR_PATH):
+        input_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, filename)
+        # only run the lowering if the previous pass was successful:
+        if LLVM_preopt_file2ret[input_file] == 0:
             basename, _ = os.path.splitext(filename)
 
             if llvm_opt == "default":
@@ -461,9 +529,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
                     os.path.join(LOGS_DIR_PATH, basename + "_selectiondag_llc.log"),
                     "w",
                 )
-                LLC_compile_riscv_selectiondag(
-                    input_file, output_file, log_file, LLC_file2ret, ""
-                )
+                LLC_selectiondag(input_file, output_file, log_file, LLC_file2ret, "")
             else:
                 output_file = os.path.join(
                     LLC_ASM_selectiondag_DIR_PATH, basename + "_" + llvm_opt + ".s"
@@ -475,20 +541,20 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
                     ),
                     "w",
                 )
-                LLC_compile_riscv_selectiondag(
+                LLC_selectiondag(
                     input_file, output_file, log_file, LLC_file2ret, "-" + llvm_opt
                 )
+        percentage = (float(idx) / float(len(LLVM_preopt_file2ret))) * 100
         idx += 1
-        percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
         print(f"compiling with llc (selectionDAG {llvm_opt}): {percentage:.2f}%")
 
     LLC_GLOBALISEL_file2ret = dict()
     idx = 0
-    # Use llc with `GlobalISel` to compile LLVMIR into RISCV
-    for filename in os.listdir(LLVMIR_DIR_PATH):
-        input_file = os.path.join(LLVMIR_DIR_PATH, filename)
+    # Use llc with `GlobalISel` to compile preoptimized LLVMIR into RISCV
+    for filename in os.listdir(LLVM_OPTIMIZED_DIR_PATH):
+        input_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, filename)
         # only run the lowering if the previous pass was successful:
-        if MLIR_translate_file2ret[input_file] == 0:  # previous pass succeded
+        if LLVM_preopt_file2ret[input_file] == 0:  # previous pass succeded
             if llvm_opt == "default":
                 basename, _ = os.path.splitext(filename)
                 output_file = os.path.join(LLC_ASM_globalisel_DIR_PATH, basename + ".s")
@@ -496,7 +562,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
                     os.path.join(LOGS_DIR_PATH, basename + "_globalisel_llc.log"),
                     "w",
                 )
-                LLC_compile_riscv_globalisel(
+                LLC_globalisel(
                     input_file, output_file, log_file, LLC_GLOBALISEL_file2ret, ""
                 )
             else:
@@ -511,29 +577,36 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
                     ),
                     "w",
                 )
-                LLC_compile_riscv_globalisel(
+                LLC_globalisel(
                     input_file,
                     output_file,
                     log_file,
                     LLC_GLOBALISEL_file2ret,
                     "-" + llvm_opt,
                 )
+        percentage = (float(idx) / float(len(LLVM_preopt_file2ret))) * 100
         idx += 1
-        percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
         print(f"compiling with llc (globalISel {llvm_opt}): {percentage:.2f}%")
 
-    # Extract bb0
+    # Extract bb0 from optimized MLIR for VeIR
     idx = 0
-    for filename in os.listdir(LLVM_DIR_PATH):
-        input_file = os.path.join(LLVM_DIR_PATH, filename)
+    for filename in os.listdir(MLIR_OPTIMIZED_DIR_PATH):
+        input_file = os.path.join(MLIR_OPTIMIZED_DIR_PATH, filename)
         basename, _ = os.path.splitext(filename)
         output_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, basename + ".mlir")
         log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_bb0_extract.log"), "w")
-        log_file_veIR = open(os.path.join(LOGS_DIR_PATH, basename + "_bb0_extract_veIR.log"), "w")
-        extract_bb0_veIR(input_file, output_file, log_file_veIR)
+        log_file_veIR = open(
+            os.path.join(LOGS_DIR_PATH, basename + "_bb0_extract_veIR.log"), "w"
+        )
+        extract_basic_block(input_file, output_file, log_file_veIR)
         idx += 1
-        percentage = (float(idx) / float(len(os.listdir(LLVM_DIR_PATH)))) * 100
+        percentage = (
+            float(idx) / float(len(os.listdir(MLIR_OPTIMIZED_DIR_PATH)))
+        ) * 100
         print(f"extracting the first basic block: {percentage:.2f}%")
+
+    for filename in os.listdir(MLIR_bb0_VEIR_DIR_PATH):
+        replace_bool_constants(os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename))
 
     # LAKE_file2ret = dict()
     # # Run the lean pass in parallel
@@ -541,26 +614,8 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
 
     LAKE_file2ret_opt = dict()
     # Run the optimized lean pass in parallel
-    LAKE_compile_riscv64(jobs, LAKE_file2ret_opt)
+    VEIR(jobs, LAKE_file2ret_opt)
 
-    # XDSL_create_func_file2ret = dict()
-    # idx = 0
-    # # Create `func.func`
-    # for filename in os.listdir(VEIR_ASM_DIR_PATH):
-    #     input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-    #     if LAKE_file2ret[input_file] == 0:
-    #         basename, _ = os.path.splitext(filename)
-    #         output_file = os.path.join(XDSL_FUNC_ASM_DIR_PATH, basename + ".mlir")
-    #         log_file = open(
-    #             os.path.join(LOGS_DIR_PATH, basename + "_xdsl_create_func.log"), "w"
-    #         )
-    #         XDSL_create_func(
-    #             input_file, output_file, log_file, XDSL_create_func_file2ret
-    #         )
-    #     idx += 1
-    #     percentage = (float(idx) / float(len(LAKE_file2ret))) * 100
-    #     print(f"creating func.func module: {percentage:.2f}%")
-    
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         sanitize(input_file)
@@ -612,7 +667,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_xdsl_reg_alloc.log"), "w"
             )
-            XDSL_reg_alloc(
+            XDSL_regalloc(
                 input_file, output_file, log_file, XDSL_reg_alloc_file2ret_opt
             )
         idx += 1

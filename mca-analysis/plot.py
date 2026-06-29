@@ -115,7 +115,7 @@ def parse_mca_file(path):
             if line.startswith("Instructions:"):
                 instructions = int(line.split()[-1]) // 100
             elif line.startswith("Total Cycles:"):
-                total_cycles = int(line.split()[-1])
+                total_cycles = int(line.split()[-1]) // 100
             elif line.startswith("Total uOps:"):
                 uops = int(line.split()[-1]) // 100
     return instructions, total_cycles, uops

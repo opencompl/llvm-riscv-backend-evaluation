@@ -5,9 +5,8 @@ from xdsl.xdsl_opt_main import xDSLOptMain
 from xdsl.rewriter import InsertPoint
 from xdsl.ir import Block
 
-from xdsl.dialects.builtin import ModuleOp, FunctionType
-from xdsl.dialects import llvm
-from xdsl.dialects import func
+from xdsl.dialects.builtin import ModuleOp, FunctionType, i64
+from xdsl.dialects import llvm, func
 
 
 class MyOptMain(xDSLOptMain):
@@ -20,8 +19,16 @@ class MyOptMain(xDSLOptMain):
 
         module_args_types = module.body.block.arg_types
         return_op = last_op
-        return_op_types = [op.type for op in return_op.operands]
         assert isinstance(return_op, llvm.ReturnOp)
+
+        new_operands = list(return_op.operands)
+        for idx, operand in enumerate(return_op.operands):
+            if operand.type != i64:
+                zext_op = llvm.ZExtOp(operand, i64)
+                Rewriter().insert_op(zext_op, InsertPoint.before(return_op))
+                new_operands[idx] = zext_op.result
+
+        return_op_types = [op.type for op in new_operands]
 
         new_region = Rewriter().move_region_contents_to_new_regions(module.body)
         func_type = FunctionType.from_lists(module_args_types, return_op_types)
@@ -30,7 +37,7 @@ class MyOptMain(xDSLOptMain):
         Rewriter().insert_op(new_func, InsertPoint.at_end(module.body.block))
         new_func.regions = [new_region]
 
-        Rewriter().replace_op(return_op, func.ReturnOp(*return_op.operands))
+        Rewriter().replace_op(return_op, func.ReturnOp(*new_operands))
 
     def run(self):
         chunks, file_extension = self.prepare_input()
