@@ -6,7 +6,7 @@
    "name": "VeIR",
    "manifestFile": "lake-manifest.json",
    "inherited": false,
-   "dir": "../veir",
+   "dir": "veir",
    "configFile": "lakefile.toml"},
   {"type": "path",
    "scope": "",
