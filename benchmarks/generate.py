@@ -82,9 +82,12 @@ def cleanup_empty_logs(LOGS_DIR_PATH):
         log_path = os.path.join(LOGS_DIR_PATH, filename)
         if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
             os.remove(log_path)
-        else: 
+        else:
             err +=1
             print(log_path)
+            with open(log_path, 'r', errors='replace') as f:
+                print(f.read())
+            
     return err
 
 
@@ -394,7 +397,7 @@ def VEIR(jobs, pass_dict, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PA
             input_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename)
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
-            log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
+            log_file = open(LOGS_DIR_PATH + basename + "_lake.log", "w")
             cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" --allow-unregistered-dialect '
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
