@@ -47,6 +47,16 @@ jobs:
           uv pip install --python build/xdsl-venv -e xdsl
           echo "$GITHUB_WORKSPACE/build/xdsl-venv/bin" >> $GITHUB_PATH
 
+      - name: Get Veir version for cache key
+        id: veir-version
+        run: echo "hash=$(git rev-parse HEAD:veir)" >> $GITHUB_OUTPUT
+
+      - name: Restore Veir build cache
+        uses: actions/cache@v4
+        with:
+          path: veir/.lake
+          key: veir-${{ steps.veir-version.outputs.hash }}-${{ hashFiles('lean-toolchain') }}
+
       - name: Set up Veir
         run: git submodule update --init -- veir
 
