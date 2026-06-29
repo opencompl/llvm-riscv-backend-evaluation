@@ -92,10 +92,10 @@ jobs:
           sudo apt-get install -y poppler-utils
           pdftoppm -r 150 -png \
             mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.pdf \
-            /tmp/tot_cycles_plot
+            /tmp/tot_cycles_globalisel_plot
           pdftoppm -r 150 -png \
             mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.pdf \
-            /tmp/tot_cycles_plot
+            /tmp/tot_cycles_selectiondag_plot
 
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -103,7 +103,8 @@ jobs:
           script: |
             const fs = require('fs')
 
-            const pngContent = fs.readFileSync('/tmp/tot_cycles_plot-1.png', { encoding: 'base64' })
+            const pngContent1 = fs.readFileSync('/tmp/tot_cycles_globalisel_plot-1.png', { encoding: 'base64' })
+            const pngContent2 = fs.readFileSync('/tmp/tot_cycles_selectiondag_plot-1.png', { encoding: 'base64' })
             const assetPath1 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.png`
             const assetPath2 = `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.png`
 
@@ -125,7 +126,7 @@ jobs:
             }
 
             // Get existing file SHA if present (required for updates)
-            let sha
+            let sha1
             try {
               const { data } = await github.rest.repos.getContent({
                 owner: context.repo.owner,
@@ -133,10 +134,10 @@ jobs:
                 path: assetPath1,
                 ref: 'ci-assets',
               })
-              sha = data.sha
+              sha1 = data.sha
             } catch (_) {}
-            
-            let sha
+
+            let sha2
             try {
               const { data } = await github.rest.repos.getContent({
                 owner: context.repo.owner,
@@ -144,28 +145,27 @@ jobs:
                 path: assetPath2,
                 ref: 'ci-assets',
               })
-              sha = data.sha
+              sha2 = data.sha
             } catch (_) {}
-
 
             await github.rest.repos.createOrUpdateFileContents({
               owner: context.repo.owner,
               repo: context.repo.repo,
               path: assetPath1,
               message: `ci: update plot for PR #${context.issue.number}`,
-              content: pngContent,
+              content: pngContent1,
               branch: 'ci-assets',
-              ...(sha && { sha }),
+              ...(sha1 && { sha: sha1 }),
             })
-            
+
             await github.rest.repos.createOrUpdateFileContents({
               owner: context.repo.owner,
               repo: context.repo.repo,
               path: assetPath2,
               message: `ci: update plot for PR #${context.issue.number}`,
-              content: pngContent,
+              content: pngContent2,
               branch: 'ci-assets',
-              ...(sha && { sha }),
+              ...(sha2 && { sha: sha2 }),
             })
 
             const imageUrl1 = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${assetPath1}`
@@ -175,5 +175,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `![tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel](${imageUr1})\n\n![tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag](${imageUr2})`
+              body: `![tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel](${imageUrl1})\n\n![tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag](${imageUrl2})`
             })
