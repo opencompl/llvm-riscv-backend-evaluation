@@ -61,7 +61,7 @@ jobs:
         run: |
           git submodule update --init -- veir
           
-      - name: Build the project
+      - name: Build Veir
         uses: leanprover/lean-action@v1
         with:
           build-args: "--iofail"
