@@ -27,6 +27,8 @@ from generate import (
     LLC_selectiondag,
     LLC_globalisel,
     VEIR,
+    veir2mir_step,
+    LLC_mir_regalloc,
     sanitize,
     rewrite_value_attr_to_immediate,
     extract_basic_block,
@@ -87,25 +89,6 @@ AUTOGEN_DIR_PATHS = [
 BENCHMARKS = [
     ROOT_DIR_PATH / "veir" / "Test" / "Vcc" / "fastntt.c",
 ]
-
-
-VEIR2MIR_BIN = ROOT_DIR_PATH / "veir" / ".lake" / "build" / "bin" / "veir2mir"
-
-
-def veir2mir_step(input_file, output_file, log_file, pass_dict):
-    cmd = f"{VEIR2MIR_BIN} {input_file} > {output_file}"
-    ret_code = run_command(cmd, log_file)
-    pass_dict[output_file] = ret_code
-
-
-def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict):
-    cmd = (
-        "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
-        f" --start-before=phi-node-elimination -filetype=asm"
-        f" -o {output_file} {input_file}"
-    )
-    ret_code = run_command(cmd, log_file)
-    pass_dict[output_file] = ret_code
 
 
 def strip_target_info(file_path):
