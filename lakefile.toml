@@ -4,7 +4,7 @@ defaultTargets = ["Bugs"]
 
 [[require]]
 name = "VeIR"
-path = "../veir"
+path = "veir"
 
 [[lean_lib]]
 name = "Bugs"
