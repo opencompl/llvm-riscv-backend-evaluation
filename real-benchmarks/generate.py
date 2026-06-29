@@ -61,6 +61,8 @@ LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_select
 
 LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_globalisel/"
 VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_ASM/"
+VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_MIR/"
+VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_REGALLOC_ASM/"
 
 LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLVM_preopt/"
 
@@ -76,6 +78,8 @@ AUTOGEN_DIR_PATHS = [
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
     VEIR_ASM_DIR_PATH,
+    VEIR_MIR_DIR_PATH,
+    VEIR_REGALLOC_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
     MLIR_OPTIMIZED_DIR_PATH,
@@ -84,6 +88,25 @@ AUTOGEN_DIR_PATHS = [
 BENCHMARKS = [
     ROOT_DIR_PATH / "veir" / "Test" / "Vcc" / "fastntt.c",
 ]
+
+
+VEIR2MIR_BIN = ROOT_DIR_PATH / "veir" / ".lake" / "build" / "bin" / "veir2mir"
+
+
+def veir2mir_step(input_file, output_file, log_file, pass_dict):
+    cmd = f"{VEIR2MIR_BIN} {input_file} > {output_file}"
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
+
+
+def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict):
+    cmd = (
+        "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
+        f" --start-before=phi-node-elimination -filetype=asm"
+        f" -o {output_file} {input_file}"
+    )
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
 
 
 def strip_target_info(file_path):
@@ -261,10 +284,36 @@ def generate_real_benchmarks(llvm_o2=False):
     # Run the optimized lean pass in parallel
     VEIR(1, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
+    # Build veir2mir once before the loop (lake build is a no-op if already built)
+    build_log = open(os.path.join(LOGS_DIR_PATH, "veir2mir_build.log"), "w")
+    run_command(f"cd {ROOT_DIR_PATH}/veir && lake build veir2mir", build_log)
+
+    veir2mir_file2ret = dict()
+    idx = 0
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        sanitize(input_file)
-        rewrite_value_attr_to_immediate(input_file)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
+        log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
+        veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
+        print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
+
+    veir_regalloc_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_MIR_DIR_PATH):
+        input_file = os.path.join(VEIR_MIR_DIR_PATH, filename)
+        if veir2mir_file2ret.get(input_file) == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(VEIR_REGALLOC_ASM_DIR_PATH, basename + ".s")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
+            )
+            LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
+        print(f"register allocating veir MIR with llc: {percentage:.2f}%")
 
     cleanup_empty_logs(LOGS_DIR_PATH)
 
