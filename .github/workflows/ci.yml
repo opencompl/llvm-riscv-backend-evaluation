@@ -76,7 +76,7 @@ jobs:
           test: false
 
       - name: Generate benchmarks
-        run: uv run benchmarks/generate.py -j 4
+        run: uv run benchmarks/generate.py -j 2
 
       - name: Generate real benchmarks
         run: uv run real-benchmarks/generate.py
