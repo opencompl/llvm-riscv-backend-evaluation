@@ -13,7 +13,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-import argparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'benchmarks'))
 
@@ -136,7 +135,7 @@ def vcc_emit_mlir(input_file, output_file, log_file, pass_dict):
     pass_dict[output_file] = ret_code
 
 
-def generate_real_benchmarks(llvm_o2=False):
+def generate_real_benchmarks():
     setup_benchmarking_directories(AUTOGEN_DIR_PATHS)
 
     vcc_file2ret = dict()
@@ -178,25 +177,21 @@ def generate_real_benchmarks(llvm_o2=False):
         percentage = (float(idx) / float(len(MLIR_opt_file2ret))) * 100
         print(f"translating to LLVMIR with mlir-translate: {percentage:.2f}%")
 
-    if llvm_o2:
-        llvmir_for_llc = LLVM_OPTIMIZED_DIR_PATH
-        llvmir_file2ret = dict()
-        idx = 0
-        for filename in os.listdir(LLVMIR_DIR_PATH):
-            input_file = os.path.join(LLVMIR_DIR_PATH, filename)
-            if MLIR_translate_file2ret[input_file] == 0:
-                basename, _ = os.path.splitext(filename)
-                output_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, basename + ".ll")
-                log_file = open(
-                    os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
-                )
-                LLVM_opt(input_file, output_file, log_file, llvmir_file2ret)
-            idx += 1
-            percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
-            print(f"preoptimizing with opt -O2: {percentage:.2f}%")
-    else:
-        llvmir_for_llc = LLVMIR_DIR_PATH
-        llvmir_file2ret = MLIR_translate_file2ret
+    llvmir_for_llc = LLVM_OPTIMIZED_DIR_PATH
+    llvmir_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(LLVMIR_DIR_PATH):
+        input_file = os.path.join(LLVMIR_DIR_PATH, filename)
+        if MLIR_translate_file2ret[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, basename + ".ll")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
+            )
+            LLVM_opt(input_file, output_file, log_file, llvmir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
+        print(f"preoptimizing with opt -O2: {percentage:.2f}%")
 
     MLIR_preopt_file2ret = dict()
     idx = 0
@@ -284,10 +279,6 @@ def generate_real_benchmarks(llvm_o2=False):
     # Run the optimized lean pass in parallel
     VEIR(1, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
-    # Build veir2mir once before the loop (lake build is a no-op if already built)
-    build_log = open(os.path.join(LOGS_DIR_PATH, "veir2mir_build.log"), "w")
-    run_command(f"cd {ROOT_DIR_PATH}/veir && lake build veir2mir", build_log)
-
     veir2mir_file2ret = dict()
     idx = 0
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
@@ -320,20 +311,8 @@ def generate_real_benchmarks(llvm_o2=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        prog="generate",
-        description="Generate a new set of benchmarks in all the representations, from MLIR to RISCV assembly.",
-    )
-    parser.add_argument(
-        "--llvm-O2",
-        dest="llvm_o2",
-        action="store_true",
-        default=False,
-        help="pre-optimize LLVMIR with opt -O2 before LLC and VeIR bb0 extraction (default: off)",
-    )
-    args = parser.parse_args()
 
-    generate_real_benchmarks(llvm_o2=args.llvm_o2)
+    generate_real_benchmarks()
 
 
 if __name__ == "__main__":
