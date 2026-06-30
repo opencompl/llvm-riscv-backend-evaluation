@@ -95,10 +95,10 @@ jobs:
         run: |
           sudo apt-get install -y poppler-utils
           pdftoppm -r 150 -png \
-            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_globalisel.pdf \
+            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf \
             /tmp/tot_cycles_globalisel_plot
           pdftoppm -r 150 -png \
-            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_vs_LLVM_selectiondag.pdf \
+            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag.pdf \
             /tmp/tot_cycles_selectiondag_plot
 
       - name: Post PR comment with plots
