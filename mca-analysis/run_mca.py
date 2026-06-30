@@ -37,32 +37,6 @@ AUTOGEN_DIR_PATHS = [
 ]
 
 
-def setup_benchmarking_directories():
-    """
-    Create clean directories to store the benchmarks.
-    """
-    results_dir = f"{ROOT_DIR}/mca-analysis/results/"
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
-    for directory in AUTOGEN_DIR_PATHS:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        else:
-            shutil.rmtree(directory)
-            os.makedirs(directory)
-
-
-def run_command(cmd, log_file, timeout=TIMEOUT):
-    try:
-        print(cmd)
-        subprocess.Popen(
-            cmd, cwd=ROOT_DIR, stdout=log_file, stderr=log_file, shell=True
-        ).wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        log_file.truncate(0)
-        log_file.write(f"timeout of {timeout} seconds reached\n")
-        print(f"{log_file} - timeout of {timeout} seconds reached")
-
 
 def mca_analysis(input_file, output_file, log_file):
     """

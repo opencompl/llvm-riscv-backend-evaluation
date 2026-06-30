@@ -1,0 +1,19 @@
+[project]
+name = "llvm-riscv-backend-evaluation"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib",
+    "num2words",
+    "numpy",
+    "pandas",
+    "pdf2image",
+    "zulip",
+]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["utils"]
