@@ -11,7 +11,7 @@ def setup_mca_directories(ROOT_DIR, AUTOGEN_DIR_PATHS):
     """
     Create clean directories to store the benchmarks.
     """
-    results_dir = f"{ROOT_DIR}/mca-analysis/results/"
+    results_dir = f"{ROOT_DIR}/results/"
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     for directory in AUTOGEN_DIR_PATHS:

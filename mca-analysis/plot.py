@@ -3,7 +3,18 @@
 import subprocess
 import argparse
 import matplotlib
-from utils.plot import build_similarity_dataframe, build_comparison_dataframes, bar_plot, violin_plot, proportional_bar_plot, geomean_plot_tot_cycles, equivalent_plot_perc, create_latex_command, convert_pdf_to_jpg, setup_plotting_directories
+from utils.plot import (
+    build_similarity_dataframe,
+    build_comparison_dataframes,
+    bar_plot,
+    violin_plot,
+    proportional_bar_plot,
+    geomean_plot_tot_cycles,
+    equivalent_plot_perc,
+    create_latex_command,
+    convert_pdf_to_jpg,
+    setup_plotting_directories,
+)
 
 
 matplotlib.rcParams["pdf.fonttype"] = 42
@@ -64,7 +75,6 @@ data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
 plots_dir = f"{ROOT_DIR_PATH}/mca-analysis/plots/"
 
 
-
 def main():
     parser = argparse.ArgumentParser(
         prog="plot",
@@ -76,7 +86,7 @@ def main():
         "--parameters",
         nargs="+",
         choices=["tot_instructions", "tot_cycles", "tot_uops", "similarity", "all"],
-        default="all"
+        default="all",
     )
 
     parser.add_argument(
@@ -84,7 +94,7 @@ def main():
         "--plot_type",
         nargs="+",
         choices=["scatter", "sorted", "stacked", "overhead", "violin", "all"],
-        default="all"
+        default="all",
     )
 
     args = parser.parse_args()
@@ -102,7 +112,9 @@ def main():
     )
 
     setup_plotting_directories(data_dir, plots_dir)
-    build_similarity_dataframe(PIPELINES, VEIR_PIPELINES, LLVM_PIPELINES).to_csv(data_dir + "similarity.csv", index=False)
+    build_similarity_dataframe(PIPELINES, VEIR_PIPELINES, LLVM_PIPELINES).to_csv(
+        data_dir + "similarity.csv", index=False
+    )
 
     df_instructions, df_cycles, df_uops = build_comparison_dataframes(PIPELINES)
     df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
@@ -119,20 +131,36 @@ def main():
                 violin_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
                 violin_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
             if "proportional" in plots_to_produce or "all" in plots_to_produce:
-                proportional_bar_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
-                proportional_bar_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
+                proportional_bar_plot(
+                    parameter, vp, "LLVM_globalisel", data_dir, plots_dir
+                )
+                proportional_bar_plot(
+                    parameter, vp, "LLVM_selectiondag", data_dir, plots_dir
+                )
         if "violin" in plots_to_produce or "all" in plots_to_produce:
-            violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag", data_dir, plots_dir)
+            violin_plot(
+                parameter, "LLVM_globalisel", "LLVM_selectiondag", data_dir, plots_dir
+            )
 
     geomean_plot_tot_cycles(data_dir, plots_dir)
     equivalent_plot_perc(data_dir, plots_dir)
-    create_latex_command(['tot_cycles', 'tot_instructions'], plots_dir + 'numerical_commands.tex', data_dir, ROOT_DIR_PATH, VEIR_PIPELINES)
-    
-    jpg_plot1 = convert_pdf_to_jpg(plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
-    jpg_plot2 = convert_pdf_to_jpg(plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
-    
+    create_latex_command(
+        ["tot_cycles", "tot_instructions"],
+        plots_dir + "numerical_commands.tex",
+        data_dir,
+        ROOT_DIR_PATH,
+        VEIR_PIPELINES,
+    )
+
+    jpg_plot1 = convert_pdf_to_jpg(
+        plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
+    )
+    jpg_plot2 = convert_pdf_to_jpg(
+        plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
+    )
+
     # upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
-    
-    
+
+
 if __name__ == "__main__":
     main()
