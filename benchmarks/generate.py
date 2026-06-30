@@ -273,7 +273,7 @@ def LLVM_opt(input_file, output_file, log_file, pass_dict):
     """
     Run opt with `O2` on an LLVM file.
     """
-    cmd_base = "opt -O2 -S "
+    cmd_base = "opt -O2 -vectorize-slp=0 -vectorize-loops=0 -S "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
