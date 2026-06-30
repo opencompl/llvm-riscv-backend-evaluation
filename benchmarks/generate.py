@@ -148,16 +148,22 @@ def rewrite_value_attr_to_immediate(file_path):
         r'rv64.ld \2(\1)',
         content,
     )
-    # riscv.srli takes a 20-bit immediate
-    content = re.sub(
-        r'(riscv\.srli\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r'\1 {immediate = \3 : i20}',
-        content,
-    )
     # riscv.bclri takes a 6-bit immediate
     content = re.sub(
         r'(riscv\.bclri\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
         r'\1 {immediate = \3 : ui6}',
+        content,
+    )
+    # riscv.slli is renamed to rv64.slli and takes a 6-bit unsigned immediate
+    content = re.sub(
+        r'riscv\.slli\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
+        r'rv64.slli"\1 {immediate = \2 : ui6}',
+        content,
+    )
+    # riscv.seli is renamed to rv64.slli and takes a 6-bit unsigned immediate
+    content = re.sub(
+        r'riscv\.srli\"(\([^)]*\)) <\{"value" = (-?\d+) : i64\}>',
+        r'rv64.srli"\1 {immediate = \2 : ui6}',
         content,
     )
     # all other riscv ops with a value attribute take a 12-bit signed immediate
