@@ -895,7 +895,7 @@ def upload_to_zulip(plot):
     else:
         client.send_message({
             "type": "stream",
-            "to": "Project - Lean4 - RISCV backend verification",
+            "to": "Project - Lean4  - RISCV backend verification",
             "topic": "EvalBot",
             "content": out,
         })
