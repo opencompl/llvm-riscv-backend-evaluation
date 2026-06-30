@@ -979,7 +979,7 @@ def main():
     jpg_plot1 = convert_pdf_to_jpg(plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
     jpg_plot2 = convert_pdf_to_jpg(plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
     
-    upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
+    # upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
     
     
     
