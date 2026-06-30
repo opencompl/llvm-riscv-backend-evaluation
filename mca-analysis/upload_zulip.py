@@ -84,29 +84,10 @@ class ContentBuilder:
         for info in self.info_to_upload:
             out += f"- {info.text}\n"
 
-        out += "## Files\n"
-        for file in self.files_to_upload:
-            uri = client.upload_file(file.path)
-            filename = os.path.basename(file.path)
-            out += f"**[{file.blurb} (Download `{filename}`)]({uri})**\n"
-            with open(file.path, "r") as f:
-                content = f.readlines()
-                # truncate content if too long
-                out += "\n```\n"
-                for line in content[:file.truncate_length]:
-                    out += line
-                if len(content) > file.truncate_length:
-                     out += "...(truncated)\n"
-                out += "\n```\n"
         out += "## Images\n"
         for image in self.images_to_upload:
             uri = client.upload_file(image.path)
             # out += f"**{image.blurb}**\n"
             out += f"[{image.blurb}]({uri})\n"
             out += "\n"
-
-        out += "## Attachments\n"
-        for attachment in self.attachments_to_upload:
-            uri = client.upload_file(attachment.path)
-            out += f"- [{attachment.name} (Download `{attachment.path}`)]({uri})\n"
         return out
