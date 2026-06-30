@@ -285,7 +285,7 @@ function_name,instructions_number,LLVM_globalisel_tot_instructions,LLVM_selectio
 5_function_84,5,6,6,6,6
 5_function_85,5,6,6,7,6
 5_function_86,5,6,6,7,6
-5_function_87,5,5,5,6,6
+5_function_87,5,6,6,6,6
 5_function_88,5,2,2,4,2
 5_function_89,5,6,6,7,6
 5_function_9,5,1,1,5,2

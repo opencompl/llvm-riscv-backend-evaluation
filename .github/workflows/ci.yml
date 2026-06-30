@@ -75,8 +75,11 @@ jobs:
       - name: Run MCA analysis (real benchmarks)
         run: python3 mca-analysis-real-benchmarks/run_mca.py
 
+      - name: Install poppler-utils
+        run: sudo apt-get install -y poppler-utils
+
       - name: Plot results
-        run: uv run --with pandas --with matplotlib --with numpy --with num2words mca-analysis/plot.py
+        run: uv run --with pandas --with matplotlib --with numpy --with num2words --with pdf2image --with zulip mca-analysis/plot.py
 
       - name: Generate real benchmark tables
         run: uv run --with matplotlib mca-analysis-real-benchmarks/table.py
@@ -93,7 +96,6 @@ jobs:
       - name: Convert plots to PNG
         if: github.event_name == 'pull_request'
         run: |
-          sudo apt-get install -y poppler-utils
           pdftoppm -r 150 -png \
             mca-analysis/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf \
             /tmp/tot_cycles_globalisel_plot

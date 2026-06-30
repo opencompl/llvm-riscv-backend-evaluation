@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import lib
 import argparse
 import shutil
 import pandas as pd
@@ -10,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 from num2words import num2words
+import upload_zulip
+from datetime import datetime
 
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["font.size"] = 20
@@ -873,7 +876,40 @@ def create_latex_command(parameters, filename):
     f.close()
     
     
+def convert_pdf_to_jpg(pdf_path):
+    from pdf2image import convert_from_path
+    images = convert_from_path(pdf_path, dpi=150)
+    jpg_path = pdf_path.replace(".pdf", ".jpg")
+    images[0].save(jpg_path, "JPEG")
+    return jpg_path
 
+
+def upload_to_zulip(caption1, caption2, plot1, plot2):
+    client = upload_zulip.Client(lib.root_dir() / "zuliprc")
+    builder = upload_zulip.ContentBuilder()
+
+    
+
+    builder.add_info(f"Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    builder.add_info(f"Machine(`{lib.machine_username()}@{lib.machine_hostname()}`): `{lib.machine_uname()}`")
+    builder.add_info(f"Upload from repository git hash `{lib.git_hash()}`")
+    builder.add_image(caption1, plot1)
+    builder.add_image(caption2, plot2)
+
+    out = builder.build(client)
+
+    dry_run = False
+    if dry_run:
+        logging.info("--- Upload ---")
+        logging.info(out)
+        logging.info("---")
+    else:
+        client.send_message({
+            "type": "stream",
+            "to": "Project - Lean4  - RISCV backend verification",
+            "topic": "EvalBot",
+            "content": out,
+        })
     
 
 
@@ -939,6 +975,13 @@ def main():
     geomean_plot_tot_cycles()
     equivalent_plot_perc()
     create_latex_command(['tot_cycles', 'tot_instructions'], plots_dir + 'numerical_commands.tex')
+    
+    jpg_plot1 = convert_pdf_to_jpg(plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
+    jpg_plot2 = convert_pdf_to_jpg(plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
+    
+    upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
+    
+    
     
 if __name__ == "__main__":
     main()
