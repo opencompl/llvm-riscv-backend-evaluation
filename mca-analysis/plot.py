@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
 
 import subprocess
-import os
 import argparse
-import shutil
-import pandas as pd
 import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import math
-from num2words import num2words
-from datetime import datetime
-from utils import upload_zulip
-from utils.plot import build_similarity_dataframe, build_comparison_dataframes, bar_plot, violin_plot, proportional_bar_plot, geomean_plot_tot_cycles, equivalent_plot_perc, create_latex_command, convert_pdf_to_jpg
+from utils.plot import build_similarity_dataframe, build_comparison_dataframes, bar_plot, violin_plot, proportional_bar_plot, geomean_plot_tot_cycles, equivalent_plot_perc, create_latex_command, convert_pdf_to_jpg, setup_plotting_directories
 
-from utils.mca import setup_mca_directories
 
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["font.size"] = 20
@@ -111,7 +101,7 @@ def main():
         else args.plot_type
     )
 
-    setup_mca_directories(ROOT_DIR_PATH, [data_dir, plots_dir])
+    setup_plotting_directories(data_dir, plots_dir)
     build_similarity_dataframe(PIPELINES, VEIR_PIPELINES, LLVM_PIPELINES).to_csv(data_dir + "similarity.csv", index=False)
 
     df_instructions, df_cycles, df_uops = build_comparison_dataframes(PIPELINES)
@@ -142,7 +132,6 @@ def main():
     jpg_plot2 = convert_pdf_to_jpg(plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
     
     # upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
-    
     
     
 if __name__ == "__main__":
