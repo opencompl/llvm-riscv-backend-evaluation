@@ -35,7 +35,7 @@ AUTOGEN_DIR_PATHS = [
 
 def main():
     # clear results directory
-    setup_mca_directories(f"{ROOT_DIR}/real-benchmarks", AUTOGEN_DIR_PATHS)
+    setup_mca_directories(f"{ROOT_DIR}/mca-analysis", AUTOGEN_DIR_PATHS)
 
     log_index = "veir_xdsl_"
     run_mca_folder(XDSL_ASM_DIR, MCA_VEIR_XDSL_DIR, LOGS_DIR, log_index, ROOT_DIR)

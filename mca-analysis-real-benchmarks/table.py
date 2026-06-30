@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from utils.plot import parse_mca_file
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -30,21 +32,6 @@ PIPELINE_LABELS = {
 }
 
 ITERATIONS = 100
-
-
-def parse_mca_file(path):
-    """Return (instructions, cycles, uops) per iteration from a .out file."""
-    instructions = cycles = uops = None
-    with open(path) as f:
-        for line in f:
-            if line.startswith("Instructions:"):
-                instructions = int(line.split()[-1]) // ITERATIONS
-            elif line.startswith("Total Cycles:"):
-                cycles = int(line.split()[-1]) // ITERATIONS
-            elif line.startswith("Total uOps:"):
-                uops = int(line.split()[-1]) // ITERATIONS
-    return instructions, cycles, uops
-
 
 def collect_data():
     """Return {benchmark_name: {pipeline: (instructions, cycles, uops)}}."""
