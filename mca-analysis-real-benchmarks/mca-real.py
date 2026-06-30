@@ -37,17 +37,23 @@ AUTOGEN_DIR_PATHS = [
 
 def main():
     # clear results directory
-    setup_mca_directories()
+    setup_mca_directories(f"{ROOT_DIR}/mca-analysis-real-benchmarks", AUTOGEN_DIR_PATHS)
 
     log_index = "veir_"
-    run_mca_folder(VEIR_REGALLOC_ASM_DIR, MCA_VEIR_DIR, log_index, ROOT_DIR)
+    run_mca_folder(VEIR_REGALLOC_ASM_DIR, MCA_VEIR_DIR, LOGS_DIR, log_index, ROOT_DIR)
 
     log_index = "gisel_"
-    run_mca_folder(LLC_ASM_globalisel_DIR, MCA_LLVM_globalisel_DIR, log_index, ROOT_DIR)
+    run_mca_folder(
+        LLC_ASM_globalisel_DIR, MCA_LLVM_globalisel_DIR, LOGS_DIR, log_index, ROOT_DIR
+    )
 
     log_index = "sdag_"
     run_mca_folder(
-        LLC_ASM_selectiondag_DIR, MCA_LLVM_selectiondag_DIR, log_index, ROOT_DIR
+        LLC_ASM_selectiondag_DIR,
+        MCA_LLVM_selectiondag_DIR,
+        LOGS_DIR,
+        log_index,
+        ROOT_DIR,
     )
 
 
