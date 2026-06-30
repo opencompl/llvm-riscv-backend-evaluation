@@ -35,3 +35,4 @@ real-benchmarks/VEIR_MIR
 benchmarks/VEIR_MIR
 benchmarks/VEIR_REGALLOC_ASM
 real-benchmarks/VEIR_REGALLOC_ASM
+*.jpg
