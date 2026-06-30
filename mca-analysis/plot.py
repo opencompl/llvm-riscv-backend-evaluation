@@ -57,13 +57,12 @@ LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
 PIPELINES = {
     "LLVM_globalisel": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/",
     "LLVM_selectiondag": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_selectiondag/",
-    "VEIR": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR/",
+    "VEIR_xdsl": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR_xdsl/",
+    "VEIR_llvm": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR_llvm/",
 }
 
-# Keep legacy aliases for any code that still references them directly
-LLVM_globalisel_results_DIR_PATH = PIPELINES["LLVM_globalisel"]
-LLVM_selectiondag_results_DIR_PATH = PIPELINES["LLVM_selectiondag"]
-VEIR_results_DIR_PATH = PIPELINES["VEIR"]
+VEIR_PIPELINES = ["VEIR_xdsl", "VEIR_llvm"]
+LLVM_PIPELINES = ["LLVM_globalisel", "LLVM_selectiondag"]
 
 tables_dir = f"{ROOT_DIR_PATH}/mca-analysis/tables/"
 data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
@@ -95,7 +94,8 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "VEIR": "VeirISel",
+    "VEIR_xdsl": "VeIR-xDSL",
+    "VEIR_llvm": "VeIR-LLVM",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
     "LLVM_globalisel_O3": "GlobalISel (O3)",
@@ -183,12 +183,14 @@ def build_similarity_dataframe():
     for name, pipelines in records.items():
         if not all(p in pipelines for p in PIPELINES):
             continue
-        rows.append({
+        row = {
             "function_name": name,
             "instructions_number": int(name.split("_")[0]),
-            "is_eqv_LLVM_globalisel": pipelines["LLVM_globalisel"] == pipelines["VEIR"],
-            "is_eqv_LLVM_selectiondag": pipelines["LLVM_selectiondag"] == pipelines["VEIR"],
-        })
+        }
+        for vp in VEIR_PIPELINES:
+            for lp in LLVM_PIPELINES:
+                row[f"is_eqv_{vp}_vs_{lp}"] = pipelines[vp] == pipelines[lp]
+        rows.append(row)
 
     df = pd.DataFrame(rows)
     # df.to_csv(data_dir + "similarity.csv", index=False)
@@ -198,41 +200,19 @@ def build_similarity_dataframe():
 def sorted_line_plot_all(parameter):
     df = pd.read_csv(data_dir + parameter + ".csv")
 
-    sorted_df = df.sort_values(
-        by=[
-            "VEIR_" + parameter,
-            "LLVM_globalisel_" + parameter,
-            "LLVM_selectiondag_" + parameter,
-        ]
-    )
+    sorted_df = df.sort_values(by=[f"{p}_{parameter}" for p in PIPELINES])
 
-    plt.plot(
-        range(len(sorted_df)),
-        sorted_df["VEIR_" + parameter],
-        label=selector_labels["VEIR"],
-        color=dark_green,
-    )
-    plt.plot(
-        range(len(sorted_df)),
-        sorted_df["LLVM_globalisel_" + parameter],
-        label=selector_labels["LLVM_globalisel"],
-        color=light_blue,
-    )
-    plt.plot(
-        range(len(sorted_df)),
-        sorted_df["LLVM_selectiondag_" + parameter],
-        label=selector_labels["LLVM_selectiondag"],
-        color=light_red,
-    )
-    plot_max = (
-        np.max(
-            [
-                sorted_df["VEIR_" + parameter].min(),
-                sorted_df["LLVM_globalisel_" + parameter].min(),
-                sorted_df["LLVM_selectiondag_" + parameter].min(),
-            ]
+    pipeline_colors = [dark_green, light_green, light_blue, light_red]
+    for p, color in zip(PIPELINES, pipeline_colors):
+        plt.plot(
+            range(len(sorted_df)),
+            sorted_df[f"{p}_{parameter}"],
+            label=selector_labels[p],
+            color=color,
         )
-        + 1
+
+    plot_max = (
+        np.max([sorted_df[f"{p}_{parameter}"].min() for p in PIPELINES]) + 1
     )
 
     plt.ylim(1, int(plot_max * 1.5) + 1)
@@ -395,7 +375,7 @@ def bar_plot(parameter, selector1, selector2):
     
     similarity_df = pd.read_csv(data_dir + "similarity.csv")
     similarity_percentages = {}
-    col_name = f"is_eqv_{selector2}"
+    col_name = f"is_eqv_{selector1}_vs_{selector2}"
     for instr_num, group_df in similarity_df.groupby("instructions_number"):
         total_count = len(group_df)
         true_count = group_df[col_name].sum()
@@ -622,69 +602,82 @@ def overhead_plot(parameter, selector1, selector2):
         # print(f"\nPlot saved to '{pdf_filename}' in the current working directory.")
         plt.close()
 
-def geomean_plot_tot_cycles(): 
-    parameters = ("#cycles", "#instructions")
-    # tot_cycles
-    df_cycles = pd.read_csv(data_dir + "tot_cycles.csv")
-    plt.figure(figsize=(6, 5))
-    df_cycles['ratio_gisel'] = df_cycles['VEIR_tot_cycles'] / df_cycles['LLVM_globalisel_tot_cycles']
-    df_cycles['ratio_sdag'] = df_cycles['VEIR_tot_cycles'] / df_cycles['LLVM_selectiondag_tot_cycles']
-    geomean_gisel_cycles = np.exp(np.mean(np.log(df_cycles["ratio_gisel"])))
-    geomean_sdag_cycles = np.exp(np.mean(np.log(df_cycles["ratio_sdag"])))
-    #tot_instructions 
-    df_instructions = pd.read_csv(data_dir + "tot_instructions.csv")
-    df_instructions['ratio_gisel'] = df_instructions['VEIR_tot_instructions'] / df_instructions['LLVM_globalisel_tot_instructions']
-    df_instructions['ratio_sdag'] = df_instructions['VEIR_tot_instructions'] / df_instructions['LLVM_selectiondag_tot_instructions']
-    geomean_gisel_instructions = np.exp(np.mean(np.log(df_instructions["ratio_gisel"])))
-    geomean_sdag_instructions= np.exp(np.mean(np.log(df_instructions["ratio_sdag"])))
-    geomeans_gisel = [geomean_gisel_instructions, geomean_gisel_cycles]
-    geomeans_sdag = [geomean_sdag_instructions, geomean_sdag_cycles]
+def geomean_plot_tot_cycles():
+    param_keys = [("tot_instructions", "#instructions"), ("tot_cycles", "#cycles")]
+    veir_llvm_pairs = [
+        ("VEIR_xdsl", "LLVM_globalisel"),
+        ("VEIR_xdsl", "LLVM_selectiondag"),
+        ("VEIR_llvm", "LLVM_globalisel"),
+        ("VEIR_llvm", "LLVM_selectiondag"),
+    ]
+    pair_colors = [light_blue, light_red, dark_blue, dark_red]
+    pair_labels = [
+        f"{selector_labels[vp]} / {selector_labels[lp]}"
+        for vp, lp in veir_llvm_pairs
+    ]
 
-    x = np.arange(len(parameters))
-    width = 0.35
-    
-    plt.bar(x - width/2, geomeans_gisel, width, label=selector_labels["LLVM_globalisel"], color=light_blue)
-    plt.bar(x + width/2, geomeans_sdag, width, label=selector_labels["LLVM_selectiondag"], color=light_red)
+    x = np.arange(len(param_keys))
+    n = len(veir_llvm_pairs)
+    width = 0.18
+    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
+
+    plt.figure(figsize=(8, 5))
+    for i, ((vp, lp), color, label, offset) in enumerate(
+        zip(veir_llvm_pairs, pair_colors, pair_labels, offsets)
+    ):
+        geomeans = []
+        for csv_key, _ in param_keys:
+            df = pd.read_csv(data_dir + csv_key + ".csv")
+            ratio = df[f"{vp}_{csv_key}"] / df[f"{lp}_{csv_key}"]
+            geomeans.append(np.exp(np.mean(np.log(ratio))))
+        plt.bar(x + offset, geomeans, width, label=label, color=color)
+
     plt.axhline(1, color=black, linestyle="--", linewidth=2)
-
     plt.ylabel(
-            'Geomean Ratio',
-            rotation="horizontal",
-            horizontalalignment="left",
-            y=1,
-        )
-    plt.xticks(x, parameters)
-    plt.legend()
+        "Geomean Ratio",
+        rotation="horizontal",
+        horizontalalignment="left",
+        y=1,
+    )
+    plt.xticks(x, [label for _, label in param_keys])
+    plt.legend(fontsize=12)
     plt.tight_layout()
-    
+
     pdf_filename = plots_dir + "geomean_comparison.pdf"
     plt.savefig(pdf_filename)
-    print(f"\nGeometric mean plot saved to '{pdf_filename}' in the current working directory.")
+    print(f"\nGeometric mean plot saved to '{pdf_filename}'.")
     plt.close()
 
 
-def equivalent_plot_perc(): 
-    df_similarity = (pd.read_csv(data_dir + "similarity.csv"))
-    
-    df_eqv_gisel = (
-        df_similarity.groupby("instructions_number")["is_eqv_LLVM_globalisel"]
-        .value_counts(normalize=True)
-        .unstack(fill_value=0)
-        * 100
-    ).reindex(columns=[False, True], fill_value=0)
+def equivalent_plot_perc():
+    df_similarity = pd.read_csv(data_dir + "similarity.csv")
 
-    df_eqv_sdag = (
-        df_similarity.groupby("instructions_number")["is_eqv_LLVM_selectiondag"]
-        .value_counts(normalize=True)
-        .unstack(fill_value=0)
-        * 100
-    ).reindex(columns=[False, True], fill_value=0)
-    plt.figure(figsize=(7, 5))
+    pairs = [
+        ("VEIR_xdsl", "LLVM_globalisel", light_blue),
+        ("VEIR_xdsl", "LLVM_selectiondag", light_red),
+        ("VEIR_llvm", "LLVM_globalisel", dark_blue),
+        ("VEIR_llvm", "LLVM_selectiondag", dark_red),
+    ]
 
-    width = 0.4
-    
-    plt.bar((df_eqv_gisel.index) - width/2, (df_eqv_gisel[True]).to_list(), width, label=selector_labels["LLVM_globalisel"], color=light_blue)
-    plt.bar((df_eqv_gisel.index) + width/2, (df_eqv_sdag[True]).to_list(), width, label=selector_labels["LLVM_selectiondag"], color=light_red)
+    plt.figure(figsize=(8, 5))
+    n = len(pairs)
+    width = 0.18
+    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
+
+    instr_nums = sorted(df_similarity["instructions_number"].unique())
+    x = np.array(instr_nums)
+
+    for (vp, lp, color), offset in zip(pairs, offsets):
+        col = f"is_eqv_{vp}_vs_{lp}"
+        pct = (
+            df_similarity.groupby("instructions_number")[col]
+            .mean() * 100
+        ).reindex(instr_nums, fill_value=0).values
+        plt.bar(
+            x + offset, pct, width,
+            label=f"{selector_labels[vp]} / {selector_labels[lp]}",
+            color=color,
+        )
     
     plt.ylabel(
             '% Identical Outputs',
@@ -807,147 +800,76 @@ def create_latex_command(parameters, filename):
     f.write(f"% E: class >2x\n")
     f.write('\n\n')
     
+    classify = lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E'
+
     # print the percentage of programs in each of the above classes, for each number of instructions
     for p in parameters:
         df = pd.read_csv(data_dir + p + ".csv")
-        
-        df['ratios_gisel'] = df['VEIR_' + p] / df['LLVM_globalisel_' + p]
-        df['ratios_sdag'] = df['VEIR_' + p] / df['LLVM_selectiondag_' + p]
+
         df['ratios_gisel_sdag'] = df['LLVM_globalisel_' + p] / df['LLVM_selectiondag_' + p]
-        df['ratios_gisel_class'] = df['ratios_gisel'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
-        df['ratios_sdag_class'] = df['ratios_sdag'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
-        df['ratios_gisel_sdag_class'] = df['ratios_gisel_sdag'].apply(lambda x: 'A' if x < 1 else 'B' if x == 1 else 'C' if x < 1.5 else 'D' if x < 2 else 'E')
-        
-        # max and min values
-        max_ratio_gisel = df["ratios_gisel"].max()
-        max_ratio_sdag = df["ratios_sdag"].max()
+        df['ratios_gisel_sdag_class'] = df['ratios_gisel_sdag'].apply(classify)
         max_ratio_gisel_sdag = df["ratios_gisel_sdag"].max()
-        min_ratio_gisel = df["ratios_gisel"].min()
-        min_ratio_sdag = df["ratios_sdag"].min()
         min_ratio_gisel_sdag = df["ratios_gisel_sdag"].min()
-        
-        if p == "tot_cycles": 
-            p = 'NumCycles'
-        else: 
-            p = 'NumInstr'
-        latex_command_max_gisel = f"\\newcommand{{\\MaxRatioVEIRVsGiselParam{p}}}{{{max_ratio_gisel:.2f}}}\n"
-        latex_command_max_sdag = f"\\newcommand{{\\MaxRatioVEIRVsSdagParam{p}}}{{{max_ratio_sdag:.2f}}}\n"
-        latex_command_max_gisel_sdag = f"\\newcommand{{\\MaxRatioGiselVsSdagParam{p}}}{{{max_ratio_gisel_sdag:.2f}}}\n"
-        latex_command_min_gisel = f"\\newcommand{{\\MinRatioVEIRVsGiselParam{p}}}{{{min_ratio_gisel:.2f}}}\n"
-        latex_command_min_sdag = f"\\newcommand{{\\MinRatioVEIRVsSdagParam{p}}}{{{min_ratio_sdag:.2f}}}\n"
-        latex_command_min_gisel_sdag = f"\\newcommand{{\\MinRatioGiselVsSdagParam{p}}}{{{min_ratio_gisel_sdag:.2f}}}\n"
-        
-        f.write(latex_command_max_gisel)
-        f.write(latex_command_max_sdag)
-        f.write(latex_command_min_gisel)
-        f.write(latex_command_min_sdag)
-        f.write(latex_command_max_gisel_sdag)
-        f.write(latex_command_min_gisel_sdag)
-        
-        
-        # calculate % of elements in each class 
-        df_grouped_gisel = df.groupby('instructions_number')['ratios_gisel_class'].value_counts(normalize=True) * 100
-        df_grouped_sdag = df.groupby('instructions_number')['ratios_sdag_class'].value_counts(normalize=True) * 100
-        df_grouped_gisel_sdag = df.groupby('instructions_number')['ratios_gisel_sdag_class'].value_counts(normalize=True) * 100
-        
-        
-        
-        # print a latex command for each percentage, specify in the name the class it belongs to 
-        # and the `instructions_number`
-        
-        df_grouped_gisel = df_grouped_gisel.reset_index()
-        df_grouped_sdag = df_grouped_sdag.reset_index()
-        df_grouped_gisel_sdag = df_grouped_gisel_sdag.reset_index()
-        
-        for _, row in df_grouped_gisel.iterrows(): 
-            c = row['ratios_gisel_class']
-            percentage = row['proportion']
-            instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercVEIRVsGiselParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
-            f.write(latex_command)
-        for _, row in df_grouped_sdag.iterrows(): 
-            c = row['ratios_sdag_class']
-            percentage = row['proportion']
-            instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercVEIRVsSdagParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
-            f.write(latex_command)
-            
-        for _, row in df_grouped_gisel_sdag.iterrows(): 
+
+        p_label = 'NumCycles' if p == "tot_cycles" else 'NumInstr'
+
+        f.write(f"\\newcommand{{\\MaxRatioGiselVsSdagParam{p_label}}}{{{max_ratio_gisel_sdag:.2f}}}\n")
+        f.write(f"\\newcommand{{\\MinRatioGiselVsSdagParam{p_label}}}{{{min_ratio_gisel_sdag:.2f}}}\n")
+
+        df_grouped_gisel_sdag = df.groupby('instructions_number')['ratios_gisel_sdag_class'].value_counts(normalize=True).reset_index() * 100
+        for _, row in df_grouped_gisel_sdag.reset_index().iterrows():
             c = row['ratios_gisel_sdag_class']
-            percentage = row['proportion']
             instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercGiselVsSdagParam{p}Class{c}Instr{instructions_number}}}{{{int(percentage)}\%}}\n"
-            f.write(latex_command)
-        
-        # geomean ratios and total geomeans
-        
-        geomeans_gisel = df.groupby('instructions_number')['ratios_gisel'].apply(
-            lambda x: np.exp(np.log(x).mean())
-        )
-        for instr_num, geomean_value in geomeans_gisel.items():
-            instructions_number = num2words(instr_num)
-            latex_command = f"\\newcommand{{\\GeomeanVEIRVsGiselParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
-            f.write(latex_command)
-            
-        geomeans_sdag = df.groupby('instructions_number')['ratios_sdag'].apply(
-            lambda x: np.exp(np.log(x).mean())
-        )
-        for instr_num, geomean_value in geomeans_sdag.items():
-            instructions_number = num2words(instr_num)
-            latex_command = f"\\newcommand{{\\GeomeanVEIRVsSdagParam{p}Instr{instructions_number}}}{{{geomean_value:.1f}}}\n"
-            f.write(latex_command)
-        
-        # total geomeans
-        
-        geomean_gisel_tot = np.exp(np.log(df['ratios_gisel']).mean())
-        latex_command_gisel_geomean = f"\\newcommand{{\\GeomeanTotVEIRVsGisel{p}}}{{{geomean_gisel_tot:.1f}}}\n"
-        f.write(latex_command_gisel_geomean)
-        
-        geomean_gisel_tot_perc = (np.exp(np.log(df['ratios_gisel']).mean()) - 1) * 100
-        latex_command_gisel_geomean_perc = f"\\newcommand{{\\GeomeanTotVEIRVsGiselSlowDownPerc{p}}}{{{geomean_gisel_tot_perc:.1f}\%}}\n"
-        f.write(latex_command_gisel_geomean_perc)
-        
-        geomean_sdag_tot = np.exp(np.log(df['ratios_sdag']).mean())
-        latex_command_sdag_geomean = f"\\newcommand{{\\GeomeanTotVEIRVsSdag{p}}}{{{geomean_sdag_tot:.1f}}}\n"
-        f.write(latex_command_sdag_geomean)
-        
-        geomean_sdag_tot_perc = (np.exp(np.log(df['ratios_sdag']).mean()) - 1) * 100
-        latex_command_sdag_geomean_perc = f"\\newcommand{{\\GeomeanTotVEIRVsSdagSlowDownPerc{p}}}{{{geomean_sdag_tot_perc:.1f}\%}}\n"
-        f.write(latex_command_sdag_geomean_perc)
+            f.write(f"\\newcommand{{\\PercGiselVsSdagParam{p_label}Class{c}Instr{instructions_number}}}{{{int(row['proportion'])}\%}}\n")
+
+        for vp in VEIR_PIPELINES:
+            vp_label = 'Xdsl' if vp == 'VEIR_xdsl' else 'Llvm'
+            for lp, lp_label in [('LLVM_globalisel', 'Gisel'), ('LLVM_selectiondag', 'Sdag')]:
+                ratio_col = f'ratios_{vp_label}_{lp_label}'
+                df[ratio_col] = df[f'{vp}_{p}'] / df[f'{lp}_{p}']
+                df[ratio_col + '_class'] = df[ratio_col].apply(classify)
+
+                f.write(f"\\newcommand{{\\MaxRatioVEIR{vp_label}Vs{lp_label}Param{p_label}}}{{{df[ratio_col].max():.2f}}}\n")
+                f.write(f"\\newcommand{{\\MinRatioVEIR{vp_label}Vs{lp_label}Param{p_label}}}{{{df[ratio_col].min():.2f}}}\n")
+
+                grouped = df.groupby('instructions_number')[ratio_col + '_class'].value_counts(normalize=True).reset_index()
+                grouped['proportion'] *= 100
+                for _, row in grouped.iterrows():
+                    c = row[ratio_col + '_class']
+                    instr_w = num2words(row['instructions_number'])
+                    f.write(f"\\newcommand{{\\PercVEIR{vp_label}Vs{lp_label}Param{p_label}Class{c}Instr{instr_w}}}{{{int(row['proportion'])}\%}}\n")
+
+                geomeans = df.groupby('instructions_number')[ratio_col].apply(lambda x: np.exp(np.log(x).mean()))
+                for instr_num, gm in geomeans.items():
+                    instr_w = num2words(instr_num)
+                    f.write(f"\\newcommand{{\\GeomeanVEIR{vp_label}Vs{lp_label}Param{p_label}Instr{instr_w}}}{{{gm:.1f}}}\n")
+
+                gm_tot = np.exp(np.log(df[ratio_col]).mean())
+                gm_tot_perc = (gm_tot - 1) * 100
+                f.write(f"\\newcommand{{\\GeomeanTotVEIR{vp_label}Vs{lp_label}{p_label}}}{{{gm_tot:.1f}}}\n")
+                f.write(f"\\newcommand{{\\GeomeanTotVEIR{vp_label}Vs{lp_label}SlowDownPerc{p_label}}}{{{gm_tot_perc:.1f}\%}}\n")
         
         
     # print the percentage of programs that are identical, for each number of instructions
-    
     df_similarity = pd.read_csv(data_dir + "similarity.csv")
-    
-    df_similarity_gisel = df_similarity.groupby('instructions_number')['is_eqv_LLVM_globalisel'].value_counts(normalize=True) * 100
-    df_similarity_sdag = df_similarity.groupby('instructions_number')['is_eqv_LLVM_selectiondag'].value_counts(normalize=True) * 100
-    
-    df_similarity_gisel = df_similarity_gisel.reset_index()
-    df_similarity_sdag = df_similarity_sdag.reset_index()
-    
-    for idx, row in df_similarity_gisel.iterrows(): 
-        if row['is_eqv_LLVM_globalisel']: 
-            percentage = row['proportion']
-            instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercIdenticalGiselInstr{instructions_number}}}{{{int(percentage)}\%}}\n"
-            f.write(latex_command)
-    for idx, row in df_similarity_sdag.iterrows(): 
-        if row['is_eqv_LLVM_selectiondag']: 
-            percentage = row['proportion']
-            instructions_number = num2words(row['instructions_number'])
-            latex_command = f"\\newcommand{{\\PercIdenticalSdagInstr{instructions_number}}}{{{int(percentage)}\%}}\n"
-            f.write(latex_command)
-    
-    # total similarity 
-    
-    tot_similarity_gisel_true = df_similarity['is_eqv_LLVM_globalisel'].sum()/len(df_similarity)*100
-    tot_similarity_sdag_true = df_similarity['is_eqv_LLVM_selectiondag'].sum()/len(df_similarity)*100
-    
-    latex_command_similarity_tot_gisel = f"\\newcommand{{\\PercIdenticalGiselTot}}{{{tot_similarity_gisel_true:.1f}\%}}\n"
-    f.write(latex_command_similarity_tot_gisel)
-    latex_command_similarity_tot_sdag = f"\\newcommand{{\\PercIdenticalSdagTot}}{{{tot_similarity_sdag_true:.1f}\%}}\n"
-    f.write(latex_command_similarity_tot_sdag)
+
+    for vp in VEIR_PIPELINES:
+        vp_label = 'Xdsl' if vp == 'VEIR_xdsl' else 'Llvm'
+        for lp, lp_label in [('LLVM_globalisel', 'Gisel'), ('LLVM_selectiondag', 'Sdag')]:
+            col = f"is_eqv_{vp}_vs_{lp}"
+            grouped = (
+                df_similarity.groupby('instructions_number')[col]
+                .value_counts(normalize=True)
+                .reset_index()
+            )
+            grouped['proportion'] *= 100
+            for _, row in grouped.iterrows():
+                if row[col]:
+                    instr_w = num2words(row['instructions_number'])
+                    f.write(f"\\newcommand{{\\PercIdentical{vp_label}{lp_label}Instr{instr_w}}}{{{int(row['proportion'])}\%}}\n")
+            tot = df_similarity[col].mean() * 100
+            f.write(f"\\newcommand{{\\PercIdentical{vp_label}{lp_label}Tot}}{{{tot:.1f}\%}}\n")
+
     f.close()
     
     
@@ -1001,16 +923,18 @@ def main():
 
     numeric_params = [p for p in params_to_evaluate if p != "similarity"]
     for parameter in numeric_params:
-        if "stacked" in plots_to_produce or "all" in plots_to_produce:
-            bar_plot(parameter, "VEIR", "LLVM_globalisel")
-            bar_plot(parameter, "VEIR", "LLVM_selectiondag")
+        for vp in VEIR_PIPELINES:
+            if "stacked" in plots_to_produce or "all" in plots_to_produce:
+                bar_plot(parameter, vp, "LLVM_globalisel")
+                bar_plot(parameter, vp, "LLVM_selectiondag")
+            if "violin" in plots_to_produce or "all" in plots_to_produce:
+                violin_plot(parameter, vp, "LLVM_globalisel")
+                violin_plot(parameter, vp, "LLVM_selectiondag")
+            if "proportional" in plots_to_produce or "all" in plots_to_produce:
+                proportional_bar_plot(parameter, vp, "LLVM_globalisel")
+                proportional_bar_plot(parameter, vp, "LLVM_selectiondag")
         if "violin" in plots_to_produce or "all" in plots_to_produce:
-            violin_plot(parameter, "VEIR", "LLVM_globalisel")
-            violin_plot(parameter, "VEIR", "LLVM_selectiondag")
             violin_plot(parameter, "LLVM_globalisel", "LLVM_selectiondag")
-        if "proportional" in plots_to_produce or "all" in plots_to_produce:
-            proportional_bar_plot(parameter, "VEIR", "LLVM_globalisel")
-            proportional_bar_plot(parameter, "VEIR", "LLVM_selectiondag")
 
     geomean_plot_tot_cycles()
     equivalent_plot_perc()

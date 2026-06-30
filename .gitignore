@@ -17,6 +17,7 @@ benchmarks/VEIR_ASM
 benchmarks/XDSL_FUNC
 benchmarks/XDSL_ASM
 mca-analysis/results
+mca-analysis-real-benchmarks/results
 .lake/
 real-benchmarks/LLC_ASM_globalisel
 real-benchmarks/LLC_ASM_selectiondag
@@ -30,5 +31,7 @@ real-benchmarks/LLVM_preopt
 real-benchmarks/MLIR_multi
 real-benchmarks/MLIR_single
 real-benchmarks/VEIR_ASM
-real-benchmarks/XDSL_FUNC
-real-benchmarks/XDSL_ASM
+real-benchmarks/VEIR_MIR
+benchmarks/VEIR_MIR
+benchmarks/VEIR_REGALLOC_ASM
+real-benchmarks/VEIR_REGALLOC_ASM

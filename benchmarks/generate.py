@@ -42,6 +42,10 @@ LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_selectionda
 
 LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_globalisel/"
 VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM/"
+VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_MIR/"
+VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_REGALLOC_ASM/"
+
+VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 
 LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM_preopt/"
 
@@ -63,6 +67,8 @@ AUTOGEN_DIR_PATHS = [
     LLC_ASM_globalisel_DIR_PATH,
     XDSL_FUNC_ASM_DIR_PATH,
     VEIR_ASM_DIR_PATH,
+    VEIR_MIR_DIR_PATH,
+    VEIR_REGALLOC_ASM_DIR_PATH,
     XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
@@ -76,10 +82,13 @@ def cleanup_empty_logs(LOGS_DIR_PATH):
         log_path = os.path.join(LOGS_DIR_PATH, filename)
         if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
             os.remove(log_path)
-        else: 
+        else:
             err +=1
             print(log_path)
-    print(f"Found {err} errors throughout the pipeline.")
+            with open(log_path, 'r', errors='replace') as f:
+                print(f.read())
+    print(f"{err} failed lowerings.")
+    return err
 
 
 def setup_benchmarking_directories(AUTOGEN_DIR_PATHS):
@@ -100,7 +109,7 @@ def sanitize(file_path):
     content = content.replace("sextw", "sext.w")
     content = content.replace("zextw", "zext.w")
     content = content.replace("czeroeqz", "czero.eqz")
-    content = content.replace("czeroeqz", "czero.eqz")
+    content = content.replace("czeronez", "czero.nez")
 
     with open(file_path, "w") as f:
         f.write(content)
@@ -264,7 +273,7 @@ def LLVM_opt(input_file, output_file, log_file, pass_dict):
     """
     Run opt with `O2` on an LLVM file.
     """
-    cmd_base = "opt -O2 -S "
+    cmd_base = "opt -O2 -vectorize-slp=0 -vectorize-loops=0 -S "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
@@ -388,8 +397,8 @@ def VEIR(jobs, pass_dict, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PA
             input_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename)
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
-            log_file = open(LOGS_DIR_PATH + basename + "_lake.mlir", "w")
-            cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" --allow-unregistered-dialect '
+            log_file = open(LOGS_DIR_PATH + basename + "_lake.log", "w")
+            cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" '
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file)
             futures[future] = output_file
@@ -430,6 +439,22 @@ def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
     except Exception as e:
         print(f"XDSL_reg_alloc failed for {input_file} with error: {e}", file=log_file)
         pass_dict[output_file] = 0
+
+
+def veir2mir_step(input_file, output_file, log_file, pass_dict):
+    cmd = f"{VEIR2MIR_BIN} {input_file} > {output_file}"
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
+
+
+def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict):
+    cmd = (
+        "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
+        f" --start-before=phi-node-elimination -filetype=asm"
+        f" -o {output_file} {input_file}"
+    )
+    ret_code = run_command(cmd, log_file)
+    pass_dict[output_file] = ret_code
 
 
 def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
@@ -621,6 +646,33 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
     # Run the optimized lean pass in parallel
     VEIR(jobs, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
+    veir2mir_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_ASM_DIR_PATH):
+        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
+        log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
+        veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
+        print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
+
+    veir_regalloc_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_MIR_DIR_PATH):
+        input_file = os.path.join(VEIR_MIR_DIR_PATH, filename)
+        if veir2mir_file2ret.get(input_file) == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(VEIR_REGALLOC_ASM_DIR_PATH, basename + ".s")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
+            )
+            LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
+        print(f"register allocating veir MIR with llc: {percentage:.2f}%")
+
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
         sanitize(input_file)
@@ -679,7 +731,7 @@ def generate_benchmarks(num, jobs, llvm_opt, compare_lowering_patterns=False):
         percentage = (float(idx) / float(len(XDSL_create_func_file2ret_opt))) * 100
         print(f"allocating registers and outputting assembly (opt): {percentage:.2f}%")
 
-    cleanup_empty_logs(LOGS_DIR_PATH)
+    return cleanup_empty_logs(LOGS_DIR_PATH)
 
 
 def main():
@@ -713,8 +765,10 @@ def main():
     )
 
     args = parser.parse_args()
+    
+    code = generate_benchmarks(args.num, args.jobs, args.llvm_opt, args.instruction_lowering)
 
-    generate_benchmarks(args.num, args.jobs, args.llvm_opt, args.instruction_lowering)
+    sys.exit(code)
 
 
 if __name__ == "__main__":

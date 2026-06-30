@@ -12,25 +12,27 @@ ROOT_DIR = (
 TIMEOUT = 1800  # seconds
 
 LLC_ASM_globalisel_DIR = (
-    f"{ROOT_DIR}/benchmarks/LLC_ASM_globalisel/"
+    f"{ROOT_DIR}/real-benchmarks/LLC_ASM_globalisel/"
 )
 LLC_ASM_selectiondag_DIR = (
-    f"{ROOT_DIR}/benchmarks/LLC_ASM_selectiondag/"
+    f"{ROOT_DIR}/real-benchmarks/LLC_ASM_selectiondag/"
 )
-LLC_ASM_DIR = f"{ROOT_DIR}/benchmarks/LLC_ASM/"
-XDSL_ASM_DIR = f"{ROOT_DIR}/benchmarks/XDSL_ASM/"
-VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/benchmarks/VEIR_REGALLOC_ASM/"
-MCA_VEIR_XDSL_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_xdsl/"
-MCA_VEIR_LLVM_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_llvm/"
+LLC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/LLC_ASM/"
+VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
+VEIR_REGALLOC_ASM_DIR = (
+    f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
+)
+MCA_VEIR_DIR = (
+    f"{ROOT_DIR}/mca-analysis-real-benchmarks/results/VEIR/"
+)
 
-MCA_LLVM_globalisel_DIR = f"{ROOT_DIR}/mca-analysis/results/LLVM_globalisel/"
-MCA_LLVM_selectiondag_DIR = f"{ROOT_DIR}/mca-analysis/results/LLVM_selectiondag/"
-LOGS_DIR = f"{ROOT_DIR}/mca-analysis/results/logs/"
+MCA_LLVM_globalisel_DIR = f"{ROOT_DIR}/mca-analysis-real-benchmarks/results/LLVM_globalisel/"
+MCA_LLVM_selectiondag_DIR = f"{ROOT_DIR}/mca-analysis-real-benchmarks/results/LLVM_selectiondag/"
+LOGS_DIR = f"{ROOT_DIR}/mca-analysis-real-benchmarks/results/logs/"
 
 
 AUTOGEN_DIR_PATHS = [
-    MCA_VEIR_XDSL_DIR,
-    MCA_VEIR_LLVM_DIR,
+    MCA_VEIR_DIR,
     MCA_LLVM_globalisel_DIR,
     MCA_LLVM_selectiondag_DIR,
     LOGS_DIR,
@@ -39,9 +41,9 @@ AUTOGEN_DIR_PATHS = [
 
 def setup_benchmarking_directories():
     """
-    Create clean directories to store the benchmarks.
+    Create clean directories to store the real-benchmarks.
     """
-    results_dir = f"{ROOT_DIR}/mca-analysis/results/"
+    results_dir = f"{ROOT_DIR}/mca-analysis-real-benchmarks/results/"
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     for directory in AUTOGEN_DIR_PATHS:
@@ -78,26 +80,15 @@ def run_tests():
     setup_benchmarking_directories()
 
     idx = 0
-    for filename in os.listdir(XDSL_ASM_DIR):
-        input_file = os.path.join(XDSL_ASM_DIR, filename)
-        basename, _ = os.path.splitext(filename)
-        output_file = os.path.join(MCA_VEIR_XDSL_DIR, basename + '.out')
-        log_file = open(os.path.join(LOGS_DIR, 'veir_xdsl_' + filename), 'w')
-        mca_analysis(input_file, output_file, log_file)
-        idx += 1
-        percentage = ((float(idx) + float(1)) / float(len(os.listdir(XDSL_ASM_DIR)))) * 100
-        print(f"running mca analysis on veir-xdsl asm: {percentage:.2f}%")
-
-    idx = 0
     for filename in os.listdir(VEIR_REGALLOC_ASM_DIR):
         input_file = os.path.join(VEIR_REGALLOC_ASM_DIR, filename)
         basename, _ = os.path.splitext(filename)
-        output_file = os.path.join(MCA_VEIR_LLVM_DIR, basename + '.out')
-        log_file = open(os.path.join(LOGS_DIR, 'veir_llvm_' + filename), 'w')
+        output_file = os.path.join(MCA_VEIR_DIR, basename + '.out')
+        log_file = open(os.path.join(LOGS_DIR, 'veir_' + filename),'w')
         mca_analysis(input_file, output_file, log_file)
         idx += 1
         percentage = ((float(idx) + float(1)) / float(len(os.listdir(VEIR_REGALLOC_ASM_DIR)))) * 100
-        print(f"running mca analysis on veir-llvm asm: {percentage:.2f}%")
+        print(f"running mca analysis on veir asm: {percentage:.2f}%")
 
     idx = 0
     for filename in os.listdir(LLC_ASM_globalisel_DIR):

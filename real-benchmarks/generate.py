@@ -13,7 +13,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-import argparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'benchmarks'))
 
@@ -28,6 +27,8 @@ from generate import (
     LLC_selectiondag,
     LLC_globalisel,
     VEIR,
+    veir2mir_step,
+    LLC_mir_regalloc,
     sanitize,
     rewrite_value_attr_to_immediate,
     extract_basic_block,
@@ -61,6 +62,8 @@ LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_select
 
 LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_globalisel/"
 VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_ASM/"
+VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_MIR/"
+VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_REGALLOC_ASM/"
 
 LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLVM_preopt/"
 
@@ -76,6 +79,8 @@ AUTOGEN_DIR_PATHS = [
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
     VEIR_ASM_DIR_PATH,
+    VEIR_MIR_DIR_PATH,
+    VEIR_REGALLOC_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
     MLIR_OPTIMIZED_DIR_PATH,
@@ -113,7 +118,7 @@ def vcc_emit_mlir(input_file, output_file, log_file, pass_dict):
     pass_dict[output_file] = ret_code
 
 
-def generate_real_benchmarks(llvm_o2=False):
+def generate_real_benchmarks():
     setup_benchmarking_directories(AUTOGEN_DIR_PATHS)
 
     vcc_file2ret = dict()
@@ -155,25 +160,21 @@ def generate_real_benchmarks(llvm_o2=False):
         percentage = (float(idx) / float(len(MLIR_opt_file2ret))) * 100
         print(f"translating to LLVMIR with mlir-translate: {percentage:.2f}%")
 
-    if llvm_o2:
-        llvmir_for_llc = LLVM_OPTIMIZED_DIR_PATH
-        llvmir_file2ret = dict()
-        idx = 0
-        for filename in os.listdir(LLVMIR_DIR_PATH):
-            input_file = os.path.join(LLVMIR_DIR_PATH, filename)
-            if MLIR_translate_file2ret[input_file] == 0:
-                basename, _ = os.path.splitext(filename)
-                output_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, basename + ".ll")
-                log_file = open(
-                    os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
-                )
-                LLVM_opt(input_file, output_file, log_file, llvmir_file2ret)
-            idx += 1
-            percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
-            print(f"preoptimizing with opt -O2: {percentage:.2f}%")
-    else:
-        llvmir_for_llc = LLVMIR_DIR_PATH
-        llvmir_file2ret = MLIR_translate_file2ret
+    llvmir_for_llc = LLVM_OPTIMIZED_DIR_PATH
+    llvmir_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(LLVMIR_DIR_PATH):
+        input_file = os.path.join(LLVMIR_DIR_PATH, filename)
+        if MLIR_translate_file2ret[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(LLVM_OPTIMIZED_DIR_PATH, basename + ".ll")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
+            )
+            LLVM_opt(input_file, output_file, log_file, llvmir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
+        print(f"preoptimizing with opt -O2: {percentage:.2f}%")
 
     MLIR_preopt_file2ret = dict()
     idx = 0
@@ -261,30 +262,38 @@ def generate_real_benchmarks(llvm_o2=False):
     # Run the optimized lean pass in parallel
     VEIR(1, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
 
+    veir2mir_file2ret = dict()
+    idx = 0
     for filename in os.listdir(VEIR_ASM_DIR_PATH):
         input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        sanitize(input_file)
-        rewrite_value_attr_to_immediate(input_file)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
+        log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
+        veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
+        print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
 
-    cleanup_empty_logs(LOGS_DIR_PATH)
+    veir_regalloc_file2ret = dict()
+    idx = 0
+    for filename in os.listdir(VEIR_MIR_DIR_PATH):
+        input_file = os.path.join(VEIR_MIR_DIR_PATH, filename)
+        if veir2mir_file2ret.get(input_file) == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(VEIR_REGALLOC_ASM_DIR_PATH, basename + ".s")
+            log_file = open(
+                os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
+            )
+            LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
+        idx += 1
+        percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
+        print(f"register allocating veir MIR with llc: {percentage:.2f}%")
 
+    return cleanup_empty_logs(LOGS_DIR_PATH)
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        prog="generate",
-        description="Generate a new set of benchmarks in all the representations, from MLIR to RISCV assembly.",
-    )
-    parser.add_argument(
-        "--llvm-O2",
-        dest="llvm_o2",
-        action="store_true",
-        default=False,
-        help="pre-optimize LLVMIR with opt -O2 before LLC and VeIR bb0 extraction (default: off)",
-    )
-    args = parser.parse_args()
-
-    generate_real_benchmarks(llvm_o2=args.llvm_o2)
+    sys.exit(generate_real_benchmarks())
 
 
 if __name__ == "__main__":
