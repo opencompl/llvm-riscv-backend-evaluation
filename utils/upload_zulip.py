@@ -1,7 +1,6 @@
 from pathlib import Path
 import zulip
 import logging
-import os
 from typing import Any
 
 class FileToUpload:

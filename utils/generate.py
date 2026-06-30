@@ -3,8 +3,8 @@ import os
 import shutil
 import subprocess
 import re
-import argparse
 import concurrent.futures
+
 
 def cleanup_empty_logs(LOGS_DIR_PATH):
     err = 0
@@ -13,9 +13,9 @@ def cleanup_empty_logs(LOGS_DIR_PATH):
         if os.path.isfile(log_path) and os.path.getsize(log_path) == 0:
             os.remove(log_path)
         else:
-            err +=1
+            err += 1
             print(log_path)
-            with open(log_path, 'r', errors='replace') as f:
+            with open(log_path, "r", errors="replace") as f:
                 print(f.read())
     print(f"{err} failed lowerings.")
     return err
@@ -31,6 +31,7 @@ def setup_benchmarking_directories(AUTOGEN_DIR_PATHS):
         else:
             shutil.rmtree(directory)
             os.makedirs(directory)
+
 
 def sanitize(file_path):
     with open(file_path, "r") as f:
@@ -50,12 +51,12 @@ def replace_bool_constants(file_path):
         content = f.read()
     content = re.sub(
         r'("llvm\.mlir\.constant"\(\) <\{"value" = )false(\}> : \(\) -> i1)',
-        r'\g<1>0 : i1\2',
+        r"\g<1>0 : i1\2",
         content,
     )
     content = re.sub(
         r'("llvm\.mlir\.constant"\(\) <\{"value" = )true(\}> : \(\) -> i1)',
-        r'\g<1>1 : i1\2',
+        r"\g<1>1 : i1\2",
         content,
     )
     with open(file_path, "w") as f:
@@ -74,13 +75,13 @@ def rewrite_value_attr_to_immediate(file_path):
     # riscv.ld is renamed to rv64.ld with offset(base) custom format
     content = re.sub(
         r'"riscv\.ld"\(([^)]*)\) <\{"value" = (-?\d+) : i64\}>',
-        r'rv64.ld \2(\1)',
+        r"rv64.ld \2(\1)",
         content,
     )
     # riscv.bclri takes a 6-bit immediate
     content = re.sub(
         r'(riscv\.bclri\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r'\1 {immediate = \3 : ui6}',
+        r"\1 {immediate = \3 : ui6}",
         content,
     )
     # riscv.slli is renamed to rv64.slli and takes a 6-bit unsigned immediate
@@ -98,7 +99,7 @@ def rewrite_value_attr_to_immediate(file_path):
     # all other riscv ops with a value attribute take a 12-bit signed immediate
     content = re.sub(
         r'(riscv\.\w+\"(\([^)]*\))) <\{"value" = (-?\d+) : i64\}>',
-        r'\1 {immediate = \3 : si12}',
+        r"\1 {immediate = \3 : si12}",
         content,
     )
     with open(file_path, "w") as f:
@@ -138,7 +139,7 @@ def replace_hyphens_in_variables(file_path):
         print(f"An unexpected error occurred: {e}")
 
 
-def run_command(cmd, log_file, timeout=TIMEOUT_SEC):
+def run_command(cmd, log_file, timeout, ROOT_DIR_PATH):
     try:
         ret_code = subprocess.Popen(
             cmd, cwd=ROOT_DIR_PATH, stdout=log_file, stderr=log_file, shell=True
@@ -321,7 +322,14 @@ def extract_basic_block(input_file, output_file, log_file):
         o_f.write("}) : () -> ()\n")
 
 
-def VEIR(jobs, pass_dict, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH):
+def VEIR(
+    jobs,
+    pass_dict,
+    MLIR_bb0_VEIR_DIR_PATH,
+    VEIR_ASM_DIR_PATH,
+    LOGS_DIR_PATH,
+    ROOT_DIR_PATH,
+):
     """
     Lower the input file to RISCV with VeIR, using multiple threads.
     """
@@ -347,7 +355,7 @@ def VEIR(jobs, pass_dict, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PA
             print(f"compiling with veir {percentage:.2f}%")
 
 
-def XDSL_create_func(input_file, output_file, log_file, pass_dict):
+def XDSL_create_func(input_file, output_file, log_file, pass_dict, ROOT_DIR_PATH):
     """
     Remove unrealized casts from the RISCV64 dialect MLIR files with xdsl.
     """
@@ -374,7 +382,7 @@ def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
         pass_dict[output_file] = 0
 
 
-def veir2mir_step(input_file, output_file, log_file, pass_dict):
+def veir2mir_step(input_file, output_file, log_file, pass_dict, VEIR2MIR_BIN):
     cmd = f"{VEIR2MIR_BIN} {input_file} > {output_file}"
     ret_code = run_command(cmd, log_file)
     pass_dict[output_file] = ret_code
