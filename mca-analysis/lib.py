@@ -17,7 +17,10 @@ def machine_hostname() -> str:
     return subprocess.check_output(['hostname']).decode('utf-8').strip()
 
 def machine_username() -> str:
-    return subprocess.check_output(['logname']).decode('utf-8').strip()
+    try:
+        return subprocess.check_output(['logname'], stderr=subprocess.DEVNULL).decode('utf-8').strip()
+    except subprocess.CalledProcessError:
+        return os.environ.get('USER') or subprocess.check_output(['whoami']).decode('utf-8').strip()
 
 STATUS_FAIL = "❌"
 STATUS_GREEN_CHECK = "✅"
