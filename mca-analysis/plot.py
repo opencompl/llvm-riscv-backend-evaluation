@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import lib
 import argparse
 import shutil
 import pandas as pd
@@ -10,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 from num2words import num2words
+import upload_zulip
+from datetime import datetime
 
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["font.size"] = 20
@@ -873,7 +876,29 @@ def create_latex_command(parameters, filename):
     f.close()
     
     
+def upload_to_zulip(plot):
+    client = upload_zulip.Client(lib.root_dir() / "zuliprc")
+    builder = upload_zulip.ContentBuilder()
 
+    builder.add_info(f"Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    builder.add_info(f"Machine(`{lib.machine_username()}@{lib.machine_hostname()}`): `{lib.machine_uname()}`")
+    builder.add_info(f"Upload from repository git hash `{lib.git_hash()}`")
+    builder.add_image(f"Veir-LLVM vs. selectionDAG ({plot})", plot)
+
+    out = builder.build(client)
+
+    dry_run = False
+    if dry_run:
+        logging.info("--- Upload ---")
+        logging.info(out)
+        logging.info("---")
+    else:
+        client.send_message({
+            "type": "stream",
+            "to": "Project - Lean4 - RISCV backend verification",
+            "topic": "EvalBot",
+            "content": out,
+        })
     
 
 
@@ -939,6 +964,8 @@ def main():
     geomean_plot_tot_cycles()
     equivalent_plot_perc()
     create_latex_command(['tot_cycles', 'tot_instructions'], plots_dir + 'numerical_commands.tex')
+    
+    upload_to_zulip(plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf")
     
 if __name__ == "__main__":
     main()
