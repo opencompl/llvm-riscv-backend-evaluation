@@ -782,3 +782,31 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
             )
 
     f.close()
+
+def upload_to_zulip(captions, plots):
+    client = upload_zulip.Client(lib.root_dir() / "zuliprc")
+    builder = upload_zulip.ContentBuilder()
+
+    
+
+    builder.add_info(f"Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
+    builder.add_info(f"Machine(`{lib.machine_username()}@{lib.machine_hostname()}`): `{lib.machine_uname()}`")
+    builder.add_info(f"Upload from repository git hash `{lib.git_hash()}`")
+    
+    for c, p in zip(captions, plots):
+        builder.add_image(c, p)
+
+    out = builder.build(client)
+
+    dry_run = True
+    if dry_run:
+        logging.info("--- Upload ---")
+        logging.info(out)
+        logging.info("---")
+    else:
+        client.send_message({
+            "type": "stream",
+            "to": "Project - Lean4  - RISCV backend verification",
+            "topic": "EvalBot",
+            "content": out,
+        })

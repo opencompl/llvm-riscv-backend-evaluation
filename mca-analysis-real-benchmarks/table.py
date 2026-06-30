@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from utils import upload_zulip
 
 from utils.plot import parse_mca_file
 

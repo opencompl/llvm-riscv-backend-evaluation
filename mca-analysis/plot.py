@@ -14,6 +14,7 @@ from utils.plot import (
     create_latex_command,
     convert_pdf_to_jpg,
     setup_plotting_directories,
+    upload_to_zulip,
 )
 
 
@@ -159,7 +160,13 @@ def main():
         plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
     )
 
-    # upload_to_zulip(f"Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ", f"Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ", jpg_plot1, jpg_plot2)
+    upload_to_zulip(
+        [
+            "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+            "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+        ],
+        [jpg_plot1, jpg_plot2],
+    )
 
 
 if __name__ == "__main__":
