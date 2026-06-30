@@ -17,6 +17,13 @@ from utils.plot import (
     upload_to_zulip,
 )
 
+from utils.lib import (
+    root_dir,
+    machine_username,
+    machine_hostname,
+    machine_uname,
+    git_hash,
+)
 
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["font.size"] = 20
@@ -161,6 +168,11 @@ def main():
     )
 
     upload_to_zulip(
+        root_dir(),
+        machine_username(),
+        machine_hostname(),
+        machine_uname(),
+        git_hash(),
         [
             "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
             "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",

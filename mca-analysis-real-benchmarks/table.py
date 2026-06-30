@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 
-import os
 import subprocess
 import sys
 from pathlib import Path
-from utils import upload_zulip
 
-from utils.plot import parse_mca_file
+from utils.plot import parse_mca_file, upload_to_zulip
+
+from utils.lib import (
+    root_dir,
+    machine_username,
+    machine_hostname,
+    machine_uname,
+    git_hash,
+)
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT_DIR_PATH = Path(
-    subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    .decode()
-    .strip()
+    subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
 RESULTS_DIR = ROOT_DIR_PATH / "mca-analysis-real-benchmarks" / "results"
@@ -33,6 +38,7 @@ PIPELINE_LABELS = {
 }
 
 ITERATIONS = 100
+
 
 def collect_data():
     """Return {benchmark_name: {pipeline: (instructions, cycles, uops)}}."""
@@ -92,7 +98,8 @@ def render_table_as_png(data, metric_index, title, filepath):
     col_labels = ["Benchmark"] + [PIPELINE_LABELS[p] for p in pipeline_order]
 
     rows = [
-        [name] + [
+        [name]
+        + [
             str(row[p][metric_index]) if row[p][metric_index] is not None else "--"
             for p in pipeline_order
         ]
@@ -158,14 +165,14 @@ def main():
 
     png_tables = [
         (
-            "tot_instructions_table_real.png",
-            0,
-            "#Instructions per iteration",
-        ),
-        (
             "num_cycles_table_real.png",
             1,
             "#Cycles per iteration",
+        ),
+        (
+            "tot_instructions_table_real.png",
+            0,
+            "#Instructions per iteration",
         ),
     ]
 
@@ -174,10 +181,26 @@ def main():
         path.write_text(content + "\n")
         print(f"Written {path}")
 
+    plots = []
+
     for filename, metric_index, title in png_tables:
         path = data_dir / filename
         render_table_as_png(data, metric_index, title, path)
+        plots.append(path)
         print(f"Written {path}")
+
+    upload_to_zulip(
+        root_dir(),
+        machine_username(),
+        machine_hostname(),
+        machine_uname(),
+        git_hash(),
+        [
+            "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+            "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+        ],
+        plots,
+    )
 
 
 if __name__ == "__main__":
