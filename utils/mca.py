@@ -39,7 +39,7 @@ def run_mca_file(input_file, output_file, log_file, root_dir):
     Run MCA performance analysis on the RISCV asm `input_file`.
     """
     cmd_base = (
-        "llvm-mca -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+m,+zba,+zbb,+zbs,+zicond "
+        "llvm-mca -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+m,+b "
     )
     cmd = cmd_base + input_file + " > " + output_file
     run_command(cmd, log_file, 1800, root_dir)

@@ -810,7 +810,7 @@ def upload_to_zulip(
 
     out = builder.build(client)
 
-    dry_run = True
+    dry_run = False
     if dry_run:
         logging.info("--- Upload ---")
         logging.info(out)
