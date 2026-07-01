@@ -77,7 +77,7 @@ jobs:
 
       - name: Generate real benchmarks, run MCA analysis, and plot results
         run: | 
-          uv run real-benchmarks/generate.py -j 4 -n 100
+          uv run real-benchmarks/generate.py -j 4
           uv run real-benchmarks/mca.py
           uv run real-benchmarks/table.py
 
