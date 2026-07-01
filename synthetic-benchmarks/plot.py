@@ -69,18 +69,18 @@ ROOT_DIR_PATH = (
 LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVMIR/"
 
 PIPELINES = {
-    "LLVM_globalisel": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/",
-    "LLVM_selectiondag": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_selectiondag/",
-    "VEIR_xdsl": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR_xdsl/",
-    "VEIR_llvm": f"{ROOT_DIR_PATH}/mca-analysis/results/VEIR_llvm/",
+    "LLVM_globalisel": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/LLVM_globalisel/",
+    "LLVM_selectiondag": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/LLVM_selectiondag/",
+    "VEIR_xdsl": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/VEIR_xdsl/",
+    "VEIR_llvm": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/VEIR_llvm/",
 }
 
 VEIR_PIPELINES = ["VEIR_xdsl", "VEIR_llvm"]
 LLVM_PIPELINES = ["LLVM_globalisel", "LLVM_selectiondag"]
 
-tables_dir = f"{ROOT_DIR_PATH}/mca-analysis/tables/"
-data_dir = f"{ROOT_DIR_PATH}/mca-analysis/data/"
-plots_dir = f"{ROOT_DIR_PATH}/mca-analysis/plots/"
+tables_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/tables/"
+data_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/data/"
+plots_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/plots/"
 
 
 def main():

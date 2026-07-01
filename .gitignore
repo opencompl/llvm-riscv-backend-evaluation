@@ -16,7 +16,8 @@ synthetic-benchmarks/MLIR_single
 synthetic-benchmarks/VEIR_ASM
 synthetic-benchmarks/XDSL_FUNC
 synthetic-benchmarks/XDSL_ASM
-mca-analysis/results
+synthetic-benchmarks/results
+synthetic-benchmarks/plots
 real-benchmarks/results
 .lake/
 real-benchmarks/LLC_ASM_globalisel

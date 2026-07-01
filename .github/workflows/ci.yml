@@ -73,7 +73,7 @@ jobs:
         run: uv run real-benchmarks/generate.py
 
       - name: Run MCA analysis
-        run: uv run mca-analysis/mca-synthetic.py
+        run: uv run synthetic-benchmarks/mca.py
 
       - name: Run MCA analysis (real benchmarks)
         run: uv run real-benchmarks/mca.py
@@ -82,7 +82,7 @@ jobs:
         run: sudo apt-get install -y poppler-utils
 
       - name: Plot results
-        run: uv run mca-analysis/plot.py
+        run: uv run synthetic-benchmarks/plot.py
 
       - name: Generate real benchmark tables
         run: uv run real-benchmarks/table.py
@@ -92,18 +92,18 @@ jobs:
         with:
           name: mca-plots
           path: |
-            mca-analysis/plots/
-            mca-analysis/data/
+            synthetic-benchmarks/plots/
+            synthetic-benchmarks/data/
             real-benchmarks/data/
 
       - name: Convert plots to PNG
         if: github.event_name == 'pull_request'
         run: |
           pdftoppm -r 150 -png \
-            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf \
+            synthetic-benchmarks/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf \
             /tmp/tot_cycles_globalisel_plot
           pdftoppm -r 150 -png \
-            mca-analysis/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag.pdf \
+            synthetic-benchmarks/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag.pdf \
             /tmp/tot_cycles_selectiondag_plot
 
       - name: Post PR comment with plots
