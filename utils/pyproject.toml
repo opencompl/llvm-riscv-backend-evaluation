@@ -1,0 +1,29 @@
+[project]
+name = "utils"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib",
+    "num2words",
+    "numpy",
+    "pandas",
+    "pdf2image",
+    "xdsl",
+    "zulip",
+]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "**/*.py" }]
+
+[tool.uv.sources]
+xdsl = { path = "../xdsl" }
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["utils"]
+
+[tool.setuptools.package-dir]
+utils = "."
