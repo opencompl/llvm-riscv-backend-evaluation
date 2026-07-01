@@ -4,7 +4,6 @@ import subprocess
 import argparse
 import matplotlib
 from utils.plot import (
-    build_similarity_dataframe,
     build_comparison_dataframes,
     bar_plot,
     violin_plot,

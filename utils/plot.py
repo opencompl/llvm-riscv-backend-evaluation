@@ -100,24 +100,6 @@ def parse_mca_file(path):
                 uops = int(line.split()[-1]) // 100
     return instructions, total_cycles, uops
 
-
-def parse_instructions(path):
-    """Return the list of instruction tokens from the resource-pressure section of a .out file."""
-    instructions = []
-    in_section = False
-    with open(path) as f:
-        for line in f:
-            if (
-                "[0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:"
-                in line
-            ):
-                in_section = True
-                continue
-            if in_section and line.strip():
-                instructions.append(line.split()[8:])
-    return instructions or None
-
-
 def build_comparison_dataframes(PIPELINES):
     """
     Read all .out files from each pipeline, match by function name, and return one DataFrame
@@ -149,40 +131,7 @@ def build_comparison_dataframes(PIPELINES):
         ]
 
     return df[_cols("tot_instructions")], df[_cols("tot_cycles")], df[_cols("tot_uops")]
-
-
-def build_similarity_dataframe(PIPELINES, VEIR_PIPELINES, LLVM_PIPELINES):
-    """
-    Compare instruction lists emitted by each pipeline for the same function.
-    Writes similarity.csv to data_dir with boolean equivalence columns.
-    """
-    records = {}
-    for pipeline, directory in PIPELINES.items():
-        for filename in sorted(os.listdir(directory)):
-            if not filename.endswith(".out"):
-                continue
-            name = filename[:-4]
-            instrs = parse_instructions(os.path.join(directory, filename))
-            if instrs is not None:
-                records.setdefault(name, {})[pipeline] = instrs
-
-    rows = []
-    for name, pipelines in records.items():
-        if not all(p in pipelines for p in PIPELINES):
-            continue
-        row = {
-            "function_name": name,
-            "instructions_number": int(name.split("_")[0]),
-        }
-        for vp in VEIR_PIPELINES:
-            for lp in LLVM_PIPELINES:
-                row[f"is_eqv_{vp}_vs_{lp}"] = pipelines[vp] == pipelines[lp]
-        rows.append(row)
-
-    df = pd.DataFrame(rows)
-    # df.to_csv(data_dir + "similarity.csv", index=False)
-    return df
-
+    
 
 def scatter_plot(parameter, selector1, selector2, data_dir, plots_dir):
     df = pd.read_csv(data_dir + parameter + ".csv")
