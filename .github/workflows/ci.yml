@@ -69,17 +69,8 @@ jobs:
       - name: Install poppler-utils
         run: sudo apt-get install -y poppler-utils
 
-      - name: Generate synthetic benchmarks, run MCA analysis, and plot results
-        run: | 
-          uv run synthetic-benchmarks/generate.py -j 4 -n 100
-          uv run synthetic-benchmarks/mca.py
-          uv run synthetic-benchmarks/plot.py
-
-      - name: Generate real benchmarks, run MCA analysis, and plot results
-        run: | 
-          uv run real-benchmarks/generate.py -j 4
-          uv run real-benchmarks/mca.py
-          uv run real-benchmarks/table.py
+      - name: Make tests
+        run: make all
 
       - name: Upload plots
         uses: actions/upload-artifact@v4
