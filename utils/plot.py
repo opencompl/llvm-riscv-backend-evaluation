@@ -100,38 +100,19 @@ def parse_mca_file(path):
                 uops = int(line.split()[-1]) // 100
     return instructions, total_cycles, uops
 
-def build_comparison_dataframes(PIPELINES):
-    """
-    Read all .out files from each pipeline, match by function name, and return one DataFrame
-    per metric: (df_instructions, df_cycles, df_uops).
-    Only functions present in all three pipelines are included (inner join via dropna).
-    """
-    records = {}
+def collect_data(PIPELINES):
+    """Return a DataFrame indexed by benchmark name, one column per pipeline,
+    each cell an (instructions, cycles, uops) tuple (NaN if that pipeline has
+    no result for that benchmark)."""
+    data = {}
     for pipeline, directory in PIPELINES.items():
-        for filename in sorted(os.listdir(directory)):
-            if not filename.endswith(".out"):
-                continue
-            name = filename[:-4]
-            instr, cycles, uops = parse_mca_file(os.path.join(directory, filename))
-            entry = records.setdefault(name, {})
-            entry[f"{pipeline}_tot_instructions"] = instr
-            entry[f"{pipeline}_tot_cycles"] = cycles
-            entry[f"{pipeline}_tot_uops"] = uops
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.out")):
+            name = path.stem
+            data.setdefault(name, {})[pipeline] = parse_mca_file(path)
+    return pd.DataFrame.from_dict(data, orient="index")
 
-    df = pd.DataFrame.from_dict(records, orient="index")
-    df.index.name = "function_name"
-    df = df.reset_index().dropna()
-    df["instructions_number"] = df["function_name"].apply(
-        lambda x: int(x.split("_")[0])
-    )
-
-    def _cols(param):
-        return ["function_name", "instructions_number"] + [
-            f"{p}_{param}" for p in PIPELINES
-        ]
-
-    return df[_cols("tot_instructions")], df[_cols("tot_cycles")], df[_cols("tot_uops")]
-    
 
 def scatter_plot(parameter, selector1, selector2, data_dir, plots_dir):
     df = pd.read_csv(data_dir + parameter + ".csv")

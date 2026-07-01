@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from utils.plot import parse_mca_file, upload_to_zulip
+from utils.plot import parse_mca_file, upload_to_zulip, collect_data, setup_plotting_directories
 
 from utils.lib import (
     root_dir,
@@ -40,56 +40,38 @@ PIPELINE_LABELS = {
 ITERATIONS = 100
 
 
-def collect_data():
-    """Return {benchmark_name: {pipeline: (instructions, cycles, uops)}}."""
-    data = {}
-    for pipeline, directory in PIPELINES.items():
-        if not directory.exists():
-            continue
-        for path in sorted(directory.glob("*.out")):
-            name = path.stem
-            data.setdefault(name, {})[pipeline] = parse_mca_file(path)
-    return data
-
-
-def latex_table(data, metric_index, metric_label, caption, label):
+def latex_table(df, metric_index, metric_label, caption, label):
     """
     Emit a LaTeX figure+tabular block.  metric_index: 0=instructions, 1=cycles, 2=uops.
     """
-    pipeline_order = ["LLVM_globalisel", "LLVM_selectiondag", "VEIR"]
     col_headers = " & ".join(
-        rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in pipeline_order
+        rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in PIPELINES.keys() 
     )
 
     lines = [
         r"    \centering",
         r"    \footnotesize",
-        rf"    \begin{{tabular}}{{l {'r ' * len(pipeline_order)}}}",
+        rf"    \begin{{tabular}}{{l {'r ' * len(PIPELINES)}}}",
         r"        \toprule",
         rf"        \textbf{{Benchmark}} & {col_headers} \\",
         r"        \midrule",
     ]
 
-    complete = [
-        (name, row)
-        for name, row in sorted(data.items())
-        if all(p in row for p in pipeline_order)
-    ]
+    
+    # for name, row_data in complete:
+    #     values = []
+    #     for p in pipeline_order:
+    #         v = row_data[p][metric_index]
+    #         values.append(str(v) if v is not None else "--")
+    #     lines.append(rf"        {name} & {' & '.join(values)} \\")
 
-    for name, row_data in complete:
-        values = []
-        for p in pipeline_order:
-            v = row_data[p][metric_index]
-            values.append(str(v) if v is not None else "--")
-        lines.append(rf"        {name} & {' & '.join(values)} \\")
-
-    lines += [
-        r"        \bottomrule",
-        r"    \end{tabular}",
-        rf"    \caption{{{caption}}}",
-        rf"    \label{{{label}}}",
-    ]
-    return "\n".join(lines)
+    # lines += [
+    #     r"        \bottomrule",
+    #     r"    \end{tabular}",
+    #     rf"    \caption{{{caption}}}",
+    #     rf"    \label{{{label}}}",
+    # ]
+    # return "\n".join(lines)
 
 
 def render_table_as_png(data, metric_index, title, filepath):
@@ -132,8 +114,14 @@ def render_table_as_png(data, metric_index, title, filepath):
 
 
 def main():
-    data = collect_data()
-    if not data:
+    
+    setup_plotting_directories(ROOT_DIR_PATH / "real-benchmarks" / "data", ROOT_DIR_PATH / "real-benchmarks" / "plots"
+    )
+    df = collect_data(PIPELINES)
+    
+    df.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_data.csv", index=False)
+    
+    if df.empty:
         print("No .out files found.", file=sys.stderr)
         sys.exit(1)
 
@@ -144,7 +132,7 @@ def main():
         (
             "tot_instructions_table_real.tex",
             latex_table(
-                data,
+                df,
                 metric_index=0,
                 metric_label="instructions",
                 caption="\#instructions per iteration.",
@@ -154,7 +142,7 @@ def main():
         (
             "num_cycles_table_real.tex",
             latex_table(
-                data,
+                df,
                 metric_index=1,
                 metric_label="cycles",
                 caption="\#cycles per iteration.",
@@ -163,44 +151,44 @@ def main():
         ),
     ]
 
-    png_tables = [
-        (
-            "num_cycles_table_real.png",
-            1,
-            "#Cycles per iteration",
-        ),
-        (
-            "tot_instructions_table_real.png",
-            0,
-            "#Instructions per iteration",
-        ),
-    ]
+    # png_tables = [
+    #     (
+    #         "num_cycles_table_real.png",
+    #         1,
+    #         "#Cycles per iteration",
+    #     ),
+    #     (
+    #         "tot_instructions_table_real.png",
+    #         0,
+    #         "#Instructions per iteration",
+    #     ),
+    # ]
 
-    for filename, content in tables:
-        path = data_dir / filename
-        path.write_text(content + "\n")
-        print(f"Written {path}")
+    # for filename, content in tables:
+    #     path = data_dir / filename
+    #     path.write_text(content + "\n")
+    #     print(f"Written {path}")
 
-    plots = []
+    # plots = []
 
-    for filename, metric_index, title in png_tables:
-        path = data_dir / filename
-        render_table_as_png(data, metric_index, title, path)
-        plots.append(path)
-        print(f"Written {path}")
+    # for filename, metric_index, title in png_tables:
+    #     path = data_dir / filename
+    #     render_table_as_png(data, metric_index, title, path)
+    #     plots.append(path)
+    #     print(f"Written {path}")
 
-    upload_to_zulip(
-        root_dir(),
-        machine_username(),
-        machine_hostname(),
-        machine_uname(),
-        git_hash(),
-        [
-            "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-            "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-        ],
-        plots,
-    )
+    # upload_to_zulip(
+    #     root_dir(),
+    #     machine_username(),
+    #     machine_hostname(),
+    #     machine_uname(),
+    #     git_hash(),
+    #     [
+    #         "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+    #         "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+    #     ],
+    #     plots,
+    # )
 
 
 if __name__ == "__main__":

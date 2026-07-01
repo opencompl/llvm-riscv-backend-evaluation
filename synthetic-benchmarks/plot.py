@@ -3,8 +3,11 @@
 import subprocess
 import argparse
 import matplotlib
+from pathlib import Path
+
+import pandas as pd
 from utils.plot import (
-    build_comparison_dataframes,
+    collect_data,
     bar_plot,
     violin_plot,
     proportional_bar_plot,
@@ -59,19 +62,19 @@ colors_list = [
     white,
 ]
 
-ROOT_DIR_PATH = (
-    subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    .decode("utf-8")
-    .strip()
+ROOT_DIR_PATH = Path(
+    subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
 LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVMIR/"
 
+RESULTS_DIR = ROOT_DIR_PATH / "synthetic-benchmarks" / "results"
+
 PIPELINES = {
-    "LLVM_globalisel": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/LLVM_globalisel/",
-    "LLVM_selectiondag": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/LLVM_selectiondag/",
-    "VEIR_xdsl": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/VEIR_xdsl/",
-    "VEIR_llvm": f"{ROOT_DIR_PATH}/synthetic-benchmarks/results/VEIR_llvm/",
+    "LLVM_globalisel": RESULTS_DIR / "LLVM_globalisel",
+    "LLVM_selectiondag": RESULTS_DIR / "LLVM_selectiondag",
+    "VEIR_xdsl": RESULTS_DIR / "VEIR_xdsl",
+    "VEIR_llvm": RESULTS_DIR / "VEIR_llvm",
 }
 
 VEIR_PIPELINES = ["VEIR_xdsl", "VEIR_llvm"]
@@ -120,61 +123,67 @@ def main():
 
     setup_plotting_directories(data_dir, plots_dir)
 
-    df_instructions, df_cycles, df_uops = build_comparison_dataframes(PIPELINES)
-    df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
-    df_cycles.to_csv(data_dir + "tot_cycles.csv", index=False)
-    df_uops.to_csv(data_dir + "tot_uops.csv", index=False)
+    data_dict = collect_data(PIPELINES)
+    
+    
+    df = pd.DataFrame.from_dict(data_dict, orient="index")
+    
+    df.to_csv(data_dir + "raw_data.csv", index=False)
+    
+    # df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
+    # df_cycles.to_csv(data_dir + "tot_cycles.csv", index=False)
+    # df_uops.to_csv(data_dir + "tot_uops.csv", index=False)
 
-    numeric_params = [p for p in params_to_evaluate if p != "similarity"]
-    for parameter in numeric_params:
-        for vp in VEIR_PIPELINES:
-            if "stacked" in plots_to_produce or "all" in plots_to_produce:
-                bar_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
-                bar_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
-            if "violin" in plots_to_produce or "all" in plots_to_produce:
-                violin_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
-                violin_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
-            if "proportional" in plots_to_produce or "all" in plots_to_produce:
-                proportional_bar_plot(
-                    parameter, vp, "LLVM_globalisel", data_dir, plots_dir
-                )
-                proportional_bar_plot(
-                    parameter, vp, "LLVM_selectiondag", data_dir, plots_dir
-                )
-        if "violin" in plots_to_produce or "all" in plots_to_produce:
-            violin_plot(
-                parameter, "LLVM_globalisel", "LLVM_selectiondag", data_dir, plots_dir
-            )
+    # numeric_params = [p for p in params_to_evaluate if p != "similarity"]
+    # for parameter in numeric_params:
+    #     for vp in VEIR_PIPELINES:
+    #         if "stacked" in plots_to_produce or "all" in plots_to_produce:
+    #             bar_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
+    #             bar_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
+    #         if "violin" in plots_to_produce or "all" in plots_to_produce:
+    #             violin_plot(parameter, vp, "LLVM_globalisel", data_dir, plots_dir)
+    #             violin_plot(parameter, vp, "LLVM_selectiondag", data_dir, plots_dir)
+    #         if "proportional" in plots_to_produce or "all" in plots_to_produce:
+    #             proportional_bar_plot(
+    #                 parameter, vp, "LLVM_globalisel", data_dir, plots_dir
+    #             )
+    #             proportional_bar_plot(
+    #                 parameter, vp, "LLVM_selectiondag", data_dir, plots_dir
+    #             )
+    #     if "violin" in plots_to_produce or "all" in plots_to_produce:
+    #         violin_plot(
+    #             parameter, "LLVM_globalisel", "LLVM_selectiondag", data_dir, plots_dir
+    #         )
 
-    geomean_plot_tot_cycles(data_dir, plots_dir)
-    equivalent_plot_perc(data_dir, plots_dir)
-    create_latex_command(
-        ["tot_cycles", "tot_instructions"],
-        plots_dir + "numerical_commands.tex",
-        data_dir,
-        ROOT_DIR_PATH,
-        VEIR_PIPELINES,
-    )
+    # geomean_plot_tot_cycles(data_dir, plots_dir)
+    # equivalent_plot_perc(data_dir, plots_dir)
+    # create_latex_command(
+    #     ["tot_cycles", "tot_instructions"],
+    #     plots_dir + "numerical_commands.tex",
+    #     data_dir,
+    #     ROOT_DIR_PATH,
+    #     VEIR_PIPELINES,
+    # )
 
-    jpg_plot1 = convert_pdf_to_jpg(
-        plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
-    )
-    jpg_plot2 = convert_pdf_to_jpg(
-        plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
-    )
+    # jpg_plot1 = convert_pdf_to_jpg(
+    #     plots_dir + "tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
+    # )
+    # jpg_plot2 = convert_pdf_to_jpg(
+    #     plots_dir + "tot_instructions_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf"
+    # )
 
-    upload_to_zulip(
-        root_dir(),
-        machine_username(),
-        machine_hostname(),
-        machine_uname(),
-        git_hash(),
-        [
-            "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-            "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-        ],
-        [jpg_plot1, jpg_plot2],
-    )
+    # upload_to_zulip(
+    #     root_dir(),
+    #     machine_username(),
+    #     machine_hostname(),
+    #     machine_uname(),
+    #     git_hash(),
+    #     [
+    #         "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+    #         "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+    #     ],
+    #     [jpg_plot1, jpg_plot2],
+    # )
 
 
 if __name__ == "__main__":
