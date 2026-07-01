@@ -4,7 +4,12 @@ import subprocess
 import sys
 from pathlib import Path
 import pandas as pd
-from utils.plot import parse_mca_file, upload_to_zulip, collect_data, setup_plotting_directories, light_blue
+from utils.plot import (
+    upload_to_zulip,
+    collect_data,
+    setup_plotting_directories,
+    light_blue,
+)
 
 from utils.lib import (
     root_dir,
@@ -45,7 +50,7 @@ def latex_table(df, caption, label):
     Emit a LaTeX figure+tabular block.  metric_index: 0=instructions, 1=cycles, 2=uops.
     """
     col_headers = " & ".join(
-        rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in PIPELINES.keys() 
+        rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in PIPELINES.keys()
     )
 
     lines = [
@@ -70,7 +75,7 @@ def latex_table(df, caption, label):
         rf"    \caption{{{caption}}}",
         rf"    \label{{{label}}}",
     ]
-    
+
     return "\n".join(lines)
 
 
@@ -80,7 +85,7 @@ def render_table_as_png(df, title, filepath):
     plt.rcParams["font.family"] = ["Ubuntu", "Nimbus Sans", "sans-serif"]
 
     table_rows = []
-    
+
     col_headers = ["Benchmark"] + [PIPELINE_LABELS[p] for p in PIPELINES.keys()]
 
     for name, row in df.iterrows():
@@ -115,40 +120,29 @@ def render_table_as_png(df, title, filepath):
 
 
 def main():
-    
-    setup_plotting_directories(ROOT_DIR_PATH / "real-benchmarks" / "data", ROOT_DIR_PATH / "real-benchmarks" / "plots"
+
+    setup_plotting_directories(
+        ROOT_DIR_PATH / "real-benchmarks" / "data",
+        ROOT_DIR_PATH / "real-benchmarks" / "plots",
     )
     df_instructions, df_cycles, df_uops = collect_data(PIPELINES)
-    
-    df_instructions.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_instruction.csv", index=False)
-    df_cycles.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_cycles.csv", index=False)
-    df_uops.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_uops.csv", index=False)
-    
+
+    df_instructions.to_csv(
+        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_instruction.csv", index=False
+    )
+    df_cycles.to_csv(
+        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_cycles.csv", index=False
+    )
+    df_uops.to_csv(
+        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_uops.csv", index=False
+    )
+
     if df_instructions.empty or df_cycles.empty or df_uops.empty:
         print("No .out files found.", file=sys.stderr)
         sys.exit(1)
 
     data_dir = ROOT_DIR_PATH / "real-benchmarks" / "data"
     data_dir.mkdir(exist_ok=True)
-
-    tables = [
-        (
-            "tot_instructions_table_real.tex",
-            latex_table(
-                df_instructions,
-                caption="\#instructions per iteration.",
-                label="tab:real-instructions",
-            ),
-        ),
-        (
-            "num_cycles_table_real.tex",
-            latex_table(
-                df_cycles,
-                caption="\#cycles per iteration.",
-                label="tab:real-cycles",
-            ),
-        ),
-    ]
 
     png_tables = [
         (
@@ -163,7 +157,6 @@ def main():
         ),
     ]
 
-
     plots = []
 
     for data, filename, title in png_tables:
@@ -172,18 +165,18 @@ def main():
         plots.append(path)
         print(f"Written {path}")
 
-    # upload_to_zulip(
-    #     root_dir(),
-    #     machine_username(),
-    #     machine_hostname(),
-    #     machine_uname(),
-    #     git_hash(),
-    #     [
-    #         "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-    #         "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-    #     ],
-    #     plots,
-    # )
+    upload_to_zulip(
+        root_dir(),
+        machine_username(),
+        machine_hostname(),
+        machine_uname(),
+        git_hash(),
+        [
+            "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+            "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+        ],
+        plots,
+    )
 
 
 if __name__ == "__main__":
