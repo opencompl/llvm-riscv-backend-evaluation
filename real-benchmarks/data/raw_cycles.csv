@@ -1,2 +1,2 @@
-LLVM_globalisel,LLVM_selectiondag,VEIR
-333,334,520
+benchmark,LLVM_globalisel,LLVM_selectiondag,VEIR
+fastntt,333,334,520

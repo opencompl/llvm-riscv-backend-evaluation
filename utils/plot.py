@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import sys
 import shutil
 import pandas as pd
 import matplotlib
@@ -101,9 +102,9 @@ def parse_mca_file(path):
     return instructions, total_cycles, uops
 
 def collect_data(PIPELINES):
-    """Return three DataFrames (instructions, cycles, uops), each indexed by
-    benchmark name with one column per pipeline (NaN if that pipeline has no
-    result for that benchmark)."""
+    """Return three DataFrames (instructions, cycles, uops), each with a
+    "benchmark" column holding the benchmark name and one column per
+    pipeline (NaN if that pipeline has no result for that benchmark)."""
     instructions, cycles, uops = {}, {}, {}
     for pipeline, directory in PIPELINES.items():
         if not directory.exists():
@@ -115,9 +116,9 @@ def collect_data(PIPELINES):
             cycles.setdefault(name, {})[pipeline] = c
             uops.setdefault(name, {})[pipeline] = u
     return (
-        pd.DataFrame.from_dict(instructions, orient="index"),
-        pd.DataFrame.from_dict(cycles, orient="index"),
-        pd.DataFrame.from_dict(uops, orient="index"),
+        pd.DataFrame.from_dict(instructions, orient="index").rename_axis("benchmark").reset_index(),
+        pd.DataFrame.from_dict(cycles, orient="index").rename_axis("benchmark").reset_index(),
+        pd.DataFrame.from_dict(uops, orient="index").rename_axis("benchmark").reset_index(),
     )
 
 
@@ -206,38 +207,49 @@ def scatter_plot(parameter, selector1, selector2, data_dir, plots_dir):
     plt.close()
 
 
-def bar_plot(parameter, selector1, selector2, data_dir, plots_dir):
-    df = pd.read_csv(data_dir + parameter + ".csv")
+def stacked_bar_plot_perc(df, parameter, selector1, selector2, data_dir, plots_dir):
 
-    col1 = selector1 + "_" + parameter
-    col2 = selector2 + "_" + parameter
-
-    if col1 not in df.columns:
-        print(f"Error: the column {col1} does not exist in the dataframe.")
+    if selector1 not in df.columns:
+        print(f"Error: the column {selector1} does not exist in the dataframe.")
         return
-    if col2 not in df.columns:
-        print(f"Error: the column {col2} does not exist in the dataframe.")
+    if selector2 not in df.columns:
+        print(f"Error: the column {selector2} does not exist in the dataframe.")
         return
 
-    # Compute the difference
-    df["diff"] = df[col1] / df[col2]
-
+    # Compute the ratio between the two columns and classify them
+    df["diff"] = df[selector1] / df[selector2]
     df["diff_class"] = df["diff"].apply(classify)
-
-    # df.to_csv(data_dir + parameter + f"_{selector1}_vs_{selector2}_classified.csv")
-
+    
     # For each unique value of the initial `instructions_number`, compute the % of each diff_class
     group = (
-        df.groupby("instructions_number")["diff_class"]
+        df.groupby("init_instr")["diff_class"]
         .value_counts(normalize=True)
         .unstack(fill_value=0)
         * 100
     )
 
-    # Ensure all classes are present for consistent coloring/order
+    # classify() returns letter codes (A: <1x, B: 1x, C: 1x-1.5x, D: 1.5x-2x, E: >2x)
     class_order = ["<1x", "1x", "1x-1.5x", "1.5x-2x", ">2x"]
+    
+    # If ratio is `nan` print a failure and return
+    if df["diff"].isnull().any():
+        print(f"FAILURE: Some ratios are NaN for {parameter} between {selector1} and {selector2}.")
+        sys.exit(1)
 
-    group = group.reindex(columns=class_order, fill_value=0)
+    # Print the files with ratio < 1
+    for instr_num, group_df in df.groupby("init_instr"):
+        below_1x = group_df[group_df["diff"] < 1]
+        if not below_1x.empty:
+            print(f"{selector1} vs. {selector2} {parameter}: {instr_num}, Programs with ratio < 1x:")
+            for _, row in below_1x.iterrows():
+                print(f"  Benchmark: {row['benchmark']}, Ratio: {row['diff']:.2f}")
+                
+    # Print the 5 programs with the highest ratio for each initial instruction count
+    for instr_num, group_df in df.groupby("init_instr"):
+        top_5 = group_df.nlargest(5, "diff")
+        print(f"{selector1} vs. {selector2} {parameter}: {instr_num}, Top 5 programs with highest ratio:")
+        for _, row in top_5.iterrows():
+            print(f"  Benchmark: {row['benchmark']}, Ratio: {row['diff']:.2f}")
 
     # Colors for each class
     class_colors = {
@@ -248,92 +260,48 @@ def bar_plot(parameter, selector1, selector2, data_dir, plots_dir):
         ">2x": dark_red,
     }
 
-    similarity_df = pd.read_csv(data_dir + "similarity.csv")
-    similarity_percentages = {}
-    col_name = f"is_eqv_{selector1}_vs_{selector2}"
-    for instr_num, group_df in similarity_df.groupby("instructions_number"):
-        total_count = len(group_df)
-        true_count = group_df[col_name].sum()
-        percentage = (true_count / total_count) * 100 if total_count > 0 else 0.0
-        similarity_percentages[int(instr_num)] = percentage
+    # Stacked plot: one column per value of `init_instr`, with the % of each diff_class stacked on top of each other
+    group.plot(kind="bar", stacked=True, color=[class_colors[c] for c in class_order], figsize=(10, 5))
 
-    def plot_columns(with_similarity=False):
-        bottom = np.zeros(len(group))
-        x = group.index.astype(str)
-        plt.figure(figsize=(10, 5))
-        for c in class_order:
-            if c == "1x" and with_similarity:
-                similarity_list = list(similarity_percentages.values())
-                remaining = [a - b for a, b in zip(group[c], similarity_list)]
-                plt.bar(
-                    x, similarity_list, bottom=bottom, color=class_colors[c], hatch="//"
-                )
-                bottom += similarity_list
-                plt.bar(
-                    x, remaining, bottom=bottom, label=f"{c}", color=class_colors[c]
-                )
-                bottom += remaining
-            else:
-                plt.bar(x, group[c], bottom=bottom, label=f"{c}", color=class_colors[c])
-                bottom += group[c].values
+    plt.xlabel("#Instructions - LLVM IR")
+    plt.xticks(rotation=0)
+    plt.ylabel(
+        f"$\\frac{{\\text{{{parameters_labels[parameter]}{selector_labels[selector1]}}}}}{{\\text{{{parameters_labels[parameter]}{selector_labels[selector2]}}}}}$",
+        fontsize=26,
+        rotation="horizontal",
+        horizontalalignment="left",
+        y=1.05,
+    )
+    plt.legend(title="Ratio", bbox_to_anchor=(1.02, 1), loc="upper left")
+    plt.tight_layout()
 
-        plt.xlabel("#instructions - LLVM IR")
-        plt.ylabel(
-            "%Programs", rotation="horizontal", horizontalalignment="left", y=1.05
-        )
-        plt.legend(ncols=5, bbox_to_anchor=(0.5, -0.5), loc="lower center")
-        plt.subplots_adjust(bottom=0.4)
-        plt.tight_layout()
-
-        name_extension = "_similarity_" if with_similarity else "_"
-        pdf_filename = (
-            plots_dir
-            + f"{parameter}_stacked_bar{name_extension}{selector1}_vs_{selector2}.pdf"
-        )
-        plt.savefig(pdf_filename)
-        # print(
-        #     f"\nStacked bar plot saved to '{pdf_filename}' in the current working directory."
-        # )
-        plt.close()
-
-    plot_columns()
-    if parameter == "tot_instructions":
-        plot_columns(with_similarity=True)
+    pdf_filename = plots_dir + f"stacked_bar_{parameter}_{selector1}_vs_{selector2}.pdf"
+    plt.savefig(pdf_filename)
+    plt.close()
 
 
-def violin_plot(parameter, selector1, selector2, data_dir, plots_dir):
-    df = pd.read_csv(data_dir + parameter + ".csv")
 
-    col1 = selector1 + "_" + parameter
-    col2 = selector2 + "_" + parameter
+def violin_plot(df, parameter, selector1, selector2, data_dir, plots_dir):
 
-    if col1 not in df.columns:
-        print(f"Error: the column {col1} does not exist in the dataframe.")
+
+    if selector1 not in df.columns:
+        print(f"Error: the column {selector1} does not exist in the dataframe.")
         return
-    if col2 not in df.columns:
-        print(f"Error: the column {col2} does not exist in the dataframe.")
+    if selector2 not in df.columns:
+        print(f"Error: the column {selector2} does not exist in the dataframe.")
         return
 
-    df["ratio"] = df[col1] / df[col2]
+    df["ratio"] = df[selector1] / df[selector2]
 
-    num_above_50 = sum(df["ratio"] > 50)
 
-    print(f"Number of programs with ratio above 50: {num_above_50} out of {len(df)}")
-
-    # extract the columns with ratio > 50
-
-    high_ratio_df = (df[df["ratio"] > 50]).groupby("instructions_number")
-    for instr_num, group in high_ratio_df:
-        print(
-            f"LLVM #Instructions: {instr_num}, #programs with ratio > 50 : {len(group)}"
-        )
-
-    # remove points above 50 for y-axis scaling
-
-    grouped = df.groupby("instructions_number")["ratio"].apply(list).reset_index()
-
+    grouped = df.groupby("init_instr")["ratio"].apply(list).reset_index()
+    
+    if df["ratio"].isnull().any():
+        print(f"FAILURE: Some ratios are NaN for {parameter} between {selector1} and {selector2}.")
+        sys.exit(1)
+    
     violin_data = grouped["ratio"].values
-    positions = grouped["instructions_number"].values
+    positions = grouped["init_instr"].values
 
     plt.figure(figsize=(10, 5))
     parts = plt.violinplot(violin_data, positions, showmedians=True)
@@ -360,172 +328,53 @@ def violin_plot(parameter, selector1, selector2, data_dir, plots_dir):
         horizontalalignment="left",
         y=1.05,
     )
-
-    # add a marker at the top of every column indicating the number of outliers removed
-
-    max_ratio = df["ratio"].max()
-
-    print(
-        f"Max ratio for {parameter} between {selector1} and {selector2} is {max_ratio}"
-    )
-
-    if max_ratio > 200:
-        plt.yticks(np.arange(0, 270, 50))
-    else:
-        plt.yticks(np.arange(0, math.ceil(df["ratio"].max()) + 2, 2))
+    plt.yticks(np.arange(0, math.ceil(df["ratio"].max()) + 2, 2))
 
     plt.tight_layout()
 
-    pdf_filename = plots_dir + f"{parameter}_violin_{selector1}_vs_{selector2}.pdf"
+    pdf_filename = plots_dir + f"violin_{parameter}_{selector1}_vs_{selector2}.pdf"
     plt.savefig(pdf_filename)
-    # print(f"\nViolin plot saved to '{pdf_filename}' in the current working directory.")
     plt.close()
-
-
-def geomean_plot_tot_cycles(data_dir, plots_dir):
-    param_keys = [("tot_instructions", "#instructions"), ("tot_cycles", "#cycles")]
-    veir_llvm_pairs = [
-        ("VEIR_xdsl", "LLVM_globalisel"),
-        ("VEIR_xdsl", "LLVM_selectiondag"),
-        ("VEIR_llvm", "LLVM_globalisel"),
-        ("VEIR_llvm", "LLVM_selectiondag"),
-    ]
-    pair_colors = [light_blue, light_red, dark_blue, dark_red]
-    pair_labels = [
-        f"{selector_labels[vp]} / {selector_labels[lp]}" for vp, lp in veir_llvm_pairs
-    ]
-
-    x = np.arange(len(param_keys))
-    n = len(veir_llvm_pairs)
-    width = 0.18
-    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
-
-    plt.figure(figsize=(8, 5))
-    for i, ((vp, lp), color, label, offset) in enumerate(
-        zip(veir_llvm_pairs, pair_colors, pair_labels, offsets)
-    ):
-        geomeans = []
-        for csv_key, _ in param_keys:
-            df = pd.read_csv(data_dir + csv_key + ".csv")
-            ratio = df[f"{vp}_{csv_key}"] / df[f"{lp}_{csv_key}"]
-            geomeans.append(np.exp(np.mean(np.log(ratio))))
-        plt.bar(x + offset, geomeans, width, label=label, color=color)
-
-    plt.axhline(1, color=black, linestyle="--", linewidth=2)
-    plt.ylabel(
-        "Geomean Ratio",
-        rotation="horizontal",
-        horizontalalignment="left",
-        y=1,
-    )
-    plt.xticks(x, [label for _, label in param_keys])
-    plt.legend(fontsize=12)
-    plt.tight_layout()
-
-    pdf_filename = plots_dir + "geomean_comparison.pdf"
-    plt.savefig(pdf_filename)
-    print(f"\nGeometric mean plot saved to '{pdf_filename}'.")
-    plt.close()
-
-
-def equivalent_plot_perc(data_dir, plots_dir):
-    df_similarity = pd.read_csv(data_dir + "similarity.csv")
-
-    pairs = [
-        ("VEIR_xdsl", "LLVM_globalisel", light_blue),
-        ("VEIR_xdsl", "LLVM_selectiondag", light_red),
-        ("VEIR_llvm", "LLVM_globalisel", dark_blue),
-        ("VEIR_llvm", "LLVM_selectiondag", dark_red),
-    ]
-
-    plt.figure(figsize=(8, 5))
-    n = len(pairs)
-    width = 0.18
-    offsets = np.linspace(-(n - 1) / 2, (n - 1) / 2, n) * width
-
-    instr_nums = sorted(df_similarity["instructions_number"].unique())
-    x = np.array(instr_nums)
-
-    for (vp, lp, color), offset in zip(pairs, offsets):
-        col = f"is_eqv_{vp}_vs_{lp}"
-        pct = (
-            (df_similarity.groupby("instructions_number")[col].mean() * 100)
-            .reindex(instr_nums, fill_value=0)
-            .values
-        )
-        plt.bar(
-            x + offset,
-            pct,
-            width,
-            label=f"{selector_labels[vp]} / {selector_labels[lp]}",
-            color=color,
-        )
-
-    plt.ylabel(
-        "% Identical Outputs",
-        rotation="horizontal",
-        horizontalalignment="left",
-        y=1.05,
-    )
-    plt.xlabel("#Instructions - LLVM IR")
-
-    plt.legend()
-    plt.tight_layout()
-
-    pdf_filename = plots_dir + "equivalent_outputs.pdf"
-    plt.savefig(pdf_filename)
-    print(
-        f"\nGeometric mean plot saved to '{pdf_filename}' in the current working directory."
-    )
-    plt.close()
-
 
 def classify(x):
     if x < 1:
-        return "A"
+        return "<1x"
     if x == 1:
-        return "B"
+        return "1x"
     if x < 1.5:
-        return "C"
+        return "1x-1.5x"
     if x < 2:
-        return "D"
-    return "E"
+        return "1.5x-2x"
+    return ">2x"
 
 
-def proportional_bar_plot(parameter, selector1, selector2, data_dir, plots_dir):
-    df = pd.read_csv(data_dir + parameter + ".csv")
+def proportional_bar_plot(df, parameter, selector1, selector2, data_dir, plots_dir):
 
     plt.figure(figsize=(7, 5))
 
-    col1 = selector1 + "_" + parameter
-    col2 = selector2 + "_" + parameter
 
-    if col1 not in df.columns or col2 not in df.columns:
+    if selector1 not in df.columns or selector2 not in df.columns:
         print(
-            f"Error: One or both columns ({col1}, {col2}) do not exist in the dataframe."
+            f"Error: One or both columns ({selector1}, {selector2}) do not exist in the dataframe."
         )
         return
 
-    df["ratios"] = df[col1] / df[col2]
+    df["ratios"] = df[selector1] / df[selector2]
 
     average_ratios_by_instruction = (
-        df.groupby("instructions_number")["ratios"]
+        df.groupby("init_instr")["ratios"]
         .apply(lambda x: np.exp(np.log(x).mean()))
         .reset_index(name="average_ratio")
     )
 
-    print(selector2)
-    print(parameter)
-    print(max(df["ratios"]))
-
     width = 0.8
 
     plt.bar(
-        average_ratios_by_instruction["instructions_number"],
+        average_ratios_by_instruction["init_instr"],
         average_ratios_by_instruction["average_ratio"],
         color=light_green,
         width=width,
-        label=f"Avg. {parameters_labels[parameter]},$\\frac{{\\text{{{selector_labels[selector1]}}}}}{{\\text{{{selector_labels[selector2]}}}}}$",
+        label=f"Geomean {parameters_labels[parameter]},$\\frac{{\\text{{{selector_labels[selector1]}}}}}{{\\text{{{selector_labels[selector2]}}}}}$",
     )
 
     plt.axhline(1, color=black, linestyle="--", linewidth=2)
@@ -539,48 +388,31 @@ def proportional_bar_plot(parameter, selector1, selector2, data_dir, plots_dir):
         horizontalalignment="left",
         y=1.08,
     )
-
-    if (selector2 == "LLVM_globalisel") and (parameter == "tot_instructions"):
-        plt.yticks(np.arange(0, 2, 0.5))
-        plt.text(
-            (((average_ratios_by_instruction["instructions_number"]).to_list())[-1])
-            * 1.15,
-            0.95,
-            "GISel",
-            color=black,
-            ha="center",
-            fontsize=20,
-        )
-    elif (selector2 == "LLVM_selectiondag") and (parameter == "tot_instructions"):
-        plt.yticks(np.arange(0, 3, 1))
-        plt.text(
-            (((average_ratios_by_instruction["instructions_number"]).to_list())[-1])
-            * 1.15,
-            0.95,
-            "SDAG",
-            color=black,
-            ha="center",
-            fontsize=20,
-        )
+    
+    plt.xticks(average_ratios_by_instruction["init_instr"])
+    plt.yticks(np.arange(0, np.ceil(average_ratios_by_instruction["average_ratio"].max()) + 1, 1))
 
     plt.xticks(np.arange(3, 9, 1))
 
     plt.tight_layout()
 
     # uncomment to have numbers on top of the bars
-    # for bar in bars:
-    #     height = bar.get_height()
-    #     plt.text(bar.get_x() + bar.get_width()/2., height,
-    #             f'{height:.2f}',
-    #             ha='center', va='bottom')
+    for bar in plt.gca().patches:
+        height = bar.get_height()*1.03
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.2f}",
+            ha="center",
+            va="bottom",
+            color=black,
+        )
+
 
     pdf_filename = (
-        plots_dir + f"{parameter}_proportional_bar_{selector1}_vs_{selector2}.pdf"
+        plots_dir + f"proportional_{parameter}_{selector1}_vs_{selector2}.pdf"
     )
     plt.savefig(pdf_filename)
-    print(
-        f"\nProportional bar plot saved to '{pdf_filename}' in the current working directory."
-    )
     plt.close()
 
 
@@ -593,7 +425,7 @@ def convert_pdf_to_jpg(pdf_path):
     return jpg_path
 
 
-def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIPELINES):
+def create_latex_command(param_dfs, filename, ROOT_DIR_PATH, VEIR_PIPELINES):
     f = open(filename, "w")
 
     git_command = ["git", "rev-parse", "--short", "HEAD"]
@@ -614,12 +446,8 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
     f.write("\n\n")
 
     # print the percentage of programs in each of the above classes, for each number of instructions
-    for p in parameters:
-        df = pd.read_csv(data_dir + p + ".csv")
-
-        df["ratios_gisel_sdag"] = (
-            df["LLVM_globalisel_" + p] / df["LLVM_selectiondag_" + p]
-        )
+    for p, df in param_dfs.items():
+        df["ratios_gisel_sdag"] = df["LLVM_globalisel"] / df["LLVM_selectiondag"]
         df["ratios_gisel_sdag_class"] = df["ratios_gisel_sdag"].apply(classify)
         max_ratio_gisel_sdag = df["ratios_gisel_sdag"].max()
         min_ratio_gisel_sdag = df["ratios_gisel_sdag"].min()
@@ -634,14 +462,14 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
         )
 
         df_grouped_gisel_sdag = (
-            df.groupby("instructions_number")["ratios_gisel_sdag_class"]
+            df.groupby("init_instr")["ratios_gisel_sdag_class"]
             .value_counts(normalize=True)
             .reset_index()
-            * 100
         )
-        for _, row in df_grouped_gisel_sdag.reset_index().iterrows():
+        df_grouped_gisel_sdag["proportion"] *= 100
+        for _, row in df_grouped_gisel_sdag.iterrows():
             c = row["ratios_gisel_sdag_class"]
-            instructions_number = num2words(row["instructions_number"])
+            instructions_number = num2words(row["init_instr"])
             f.write(
                 f"\\newcommand{{\\PercGiselVsSdagParam{p_label}Class{c}Instr{instructions_number}}}{{{int(row['proportion'])}\%}}\n"
             )
@@ -653,7 +481,7 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
                 ("LLVM_selectiondag", "Sdag"),
             ]:
                 ratio_col = f"ratios_{vp_label}_{lp_label}"
-                df[ratio_col] = df[f"{vp}_{p}"] / df[f"{lp}_{p}"]
+                df[ratio_col] = df[vp] / df[lp]
                 df[ratio_col + "_class"] = df[ratio_col].apply(classify)
 
                 f.write(
@@ -664,19 +492,19 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
                 )
 
                 grouped = (
-                    df.groupby("instructions_number")[ratio_col + "_class"]
+                    df.groupby("init_instr")[ratio_col + "_class"]
                     .value_counts(normalize=True)
                     .reset_index()
                 )
                 grouped["proportion"] *= 100
                 for _, row in grouped.iterrows():
                     c = row[ratio_col + "_class"]
-                    instr_w = num2words(row["instructions_number"])
+                    instr_w = num2words(row["init_instr"])
                     f.write(
                         f"\\newcommand{{\\PercVEIR{vp_label}Vs{lp_label}Param{p_label}Class{c}Instr{instr_w}}}{{{int(row['proportion'])}\%}}\n"
                     )
 
-                geomeans = df.groupby("instructions_number")[ratio_col].apply(
+                geomeans = df.groupby("init_instr")[ratio_col].apply(
                     lambda x: np.exp(np.log(x).mean())
                 )
                 for instr_num, gm in geomeans.items():
@@ -693,33 +521,6 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
                 f.write(
                     f"\\newcommand{{\\GeomeanTotVEIR{vp_label}Vs{lp_label}SlowDownPerc{p_label}}}{{{gm_tot_perc:.1f}\%}}\n"
                 )
-
-    # print the percentage of programs that are identical, for each number of instructions
-    df_similarity = pd.read_csv(data_dir + "similarity.csv")
-
-    for vp in VEIR_PIPELINES:
-        vp_label = "Xdsl" if vp == "VEIR_xdsl" else "Llvm"
-        for lp, lp_label in [
-            ("LLVM_globalisel", "Gisel"),
-            ("LLVM_selectiondag", "Sdag"),
-        ]:
-            col = f"is_eqv_{vp}_vs_{lp}"
-            grouped = (
-                df_similarity.groupby("instructions_number")[col]
-                .value_counts(normalize=True)
-                .reset_index()
-            )
-            grouped["proportion"] *= 100
-            for _, row in grouped.iterrows():
-                if row[col]:
-                    instr_w = num2words(row["instructions_number"])
-                    f.write(
-                        f"\\newcommand{{\\PercIdentical{vp_label}{lp_label}Instr{instr_w}}}{{{int(row['proportion'])}\%}}\n"
-                    )
-            tot = df_similarity[col].mean() * 100
-            f.write(
-                f"\\newcommand{{\\PercIdentical{vp_label}{lp_label}Tot}}{{{tot:.1f}\%}}\n"
-            )
 
     f.close()
 

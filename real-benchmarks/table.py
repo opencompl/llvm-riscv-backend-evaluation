@@ -62,12 +62,12 @@ def latex_table(df, caption, label):
         r"        \midrule",
     ]
 
-    for name, row in df.iterrows():
+    for _, row in df.iterrows():
         values = [
             str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
             for p in PIPELINES.keys()
         ]
-        lines += [rf"        {name} & {' & '.join(values)} \\"]
+        lines += [rf"        {row['benchmark']} & {' & '.join(values)} \\"]
 
     lines += [
         r"        \bottomrule",
@@ -88,12 +88,12 @@ def render_table_as_png(df, title, filepath):
 
     col_headers = ["Benchmark"] + [PIPELINE_LABELS[p] for p in PIPELINES.keys()]
 
-    for name, row in df.iterrows():
+    for _, row in df.iterrows():
         values = [
             str(int(row[p])) if p in row and pd.notna(row[p]) else "FAIL"
             for p in PIPELINES.keys()
         ]
-        table_rows.append([name] + values)
+        table_rows.append([row["benchmark"]] + values)
 
     fig, ax = plt.subplots(figsize=(8, max(1.5, len(table_rows) * 0.6 + 1.2)))
     ax.axis("off")
