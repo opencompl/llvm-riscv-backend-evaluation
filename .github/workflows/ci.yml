@@ -62,6 +62,9 @@ jobs:
         with:
           build-args: "--iofail"
           test: false
+      
+      - name: Build utils
+        run: uv run utils/build.py
 
       - name: Generate benchmarks
         run: uv run benchmarks/generate.py -j 4 -n 100
