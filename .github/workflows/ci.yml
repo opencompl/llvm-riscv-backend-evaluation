@@ -73,7 +73,7 @@ jobs:
         run: uv run mca-analysis/mca-synthetic.py
 
       - name: Run MCA analysis (real benchmarks)
-        run: python3 mca-analysis-real-benchmarks/run_mca.py
+        run: uv run mca-analysis-real-benchmarks/mca-real.py
 
       - name: Install poppler-utils
         run: sudo apt-get install -y poppler-utils
