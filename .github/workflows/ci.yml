@@ -64,7 +64,7 @@ jobs:
           test: false
       
       - name: Build utils
-        run: uv run utils/build.py
+        run: uv build utils
 
       - name: Generate benchmarks
         run: uv run benchmarks/generate.py -j 4 -n 100
