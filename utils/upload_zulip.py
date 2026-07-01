@@ -60,7 +60,6 @@ class Client:
 
     def send_message(self, message: dict[str, Any]):
         _result = self.client.send_message(message)
-        print(f"send_message result: {_result}")
 
 
 class ContentBuilder:

@@ -76,7 +76,7 @@ jobs:
         run: uv run mca-analysis/mca-synthetic.py
 
       - name: Run MCA analysis (real benchmarks)
-        run: uv run mca-analysis-real-benchmarks/mca-real.py
+        run: uv run real-benchmarks/mca-real.py
 
       - name: Install poppler-utils
         run: sudo apt-get install -y poppler-utils
@@ -85,7 +85,7 @@ jobs:
         run: uv run mca-analysis/plot.py
 
       - name: Generate real benchmark tables
-        run: uv run mca-analysis-real-benchmarks/table.py
+        run: uv run real-benchmarks/table.py
 
       - name: Upload plots
         uses: actions/upload-artifact@v4
@@ -94,7 +94,7 @@ jobs:
           path: |
             mca-analysis/plots/
             mca-analysis/data/
-            mca-analysis-real-benchmarks/data/
+            real-benchmarks/data/
 
       - name: Convert plots to PNG
         if: github.event_name == 'pull_request'
@@ -125,12 +125,12 @@ jobs:
                 alt: 'tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag',
               },
               {
-                file: 'mca-analysis-real-benchmarks/data/tot_instructions_table_real.png',
+                file: 'real-benchmarks/data/tot_instructions_table_real.png',
                 path: `pr-${context.issue.number}/tot_instructions_table_real.png`,
                 alt: 'Real benchmarks — #instructions per iteration',
               },
               {
-                file: 'mca-analysis-real-benchmarks/data/num_cycles_table_real.png',
+                file: 'real-benchmarks/data/num_cycles_table_real.png',
                 path: `pr-${context.issue.number}/num_cycles_table_real.png`,
                 alt: 'Real benchmarks — #cycles per iteration',
               },

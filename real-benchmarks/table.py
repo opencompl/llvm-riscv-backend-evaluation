@@ -23,7 +23,7 @@ ROOT_DIR_PATH = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
-RESULTS_DIR = ROOT_DIR_PATH / "mca-analysis-real-benchmarks" / "results"
+RESULTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "results"
 
 PIPELINES = {
     "LLVM_globalisel": RESULTS_DIR / "LLVM_globalisel",
@@ -137,7 +137,7 @@ def main():
         print("No .out files found.", file=sys.stderr)
         sys.exit(1)
 
-    data_dir = ROOT_DIR_PATH / "mca-analysis-real-benchmarks" / "data"
+    data_dir = ROOT_DIR_PATH / "real-benchmarks" / "data"
     data_dir.mkdir(exist_ok=True)
 
     tables = [
