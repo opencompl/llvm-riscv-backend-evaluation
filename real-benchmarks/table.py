@@ -3,8 +3,8 @@
 import subprocess
 import sys
 from pathlib import Path
-
-from utils.plot import parse_mca_file, upload_to_zulip, collect_data, setup_plotting_directories
+import pandas as pd
+from utils.plot import parse_mca_file, upload_to_zulip, collect_data, setup_plotting_directories, light_blue
 
 from utils.lib import (
     root_dir,
@@ -40,7 +40,7 @@ PIPELINE_LABELS = {
 ITERATIONS = 100
 
 
-def latex_table(df, metric_index, metric_label, caption, label):
+def latex_table(df, caption, label):
     """
     Emit a LaTeX figure+tabular block.  metric_index: 0=instructions, 1=cycles, 2=uops.
     """
@@ -57,44 +57,45 @@ def latex_table(df, metric_index, metric_label, caption, label):
         r"        \midrule",
     ]
 
-    
-    # for name, row_data in complete:
-    #     values = []
-    #     for p in pipeline_order:
-    #         v = row_data[p][metric_index]
-    #         values.append(str(v) if v is not None else "--")
-    #     lines.append(rf"        {name} & {' & '.join(values)} \\")
-
-    # lines += [
-    #     r"        \bottomrule",
-    #     r"    \end{tabular}",
-    #     rf"    \caption{{{caption}}}",
-    #     rf"    \label{{{label}}}",
-    # ]
-    # return "\n".join(lines)
-
-
-def render_table_as_png(data, metric_index, title, filepath):
-    """Render the table data as a PNG image using matplotlib."""
-    pipeline_order = ["LLVM_globalisel", "LLVM_selectiondag", "VEIR"]
-    col_labels = ["Benchmark"] + [PIPELINE_LABELS[p] for p in pipeline_order]
-
-    rows = [
-        [name]
-        + [
-            str(row[p][metric_index]) if row[p][metric_index] is not None else "--"
-            for p in pipeline_order
+    for name, row in df.iterrows():
+        values = [
+            str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
+            for p in PIPELINES.keys()
         ]
-        for name, row in sorted(data.items())
-        if all(p in row for p in pipeline_order)
-    ]
+        lines += [rf"        {name} & {' & '.join(values)} \\"]
 
-    fig, ax = plt.subplots(figsize=(8, max(1.5, len(rows) * 0.6 + 1.2)))
+    lines += [
+        r"        \bottomrule",
+        r"    \end{tabular}",
+        rf"    \caption{{{caption}}}",
+        rf"    \label{{{label}}}",
+    ]
+    
+    return "\n".join(lines)
+
+
+def render_table_as_png(df, title, filepath):
+    """Render the table data as a PNG image using matplotlib."""
+
+    plt.rcParams["font.family"] = ["Ubuntu", "Nimbus Sans", "sans-serif"]
+
+    table_rows = []
+    
+    col_headers = ["Benchmark"] + [PIPELINE_LABELS[p] for p in PIPELINES.keys()]
+
+    for name, row in df.iterrows():
+        values = [
+            str(int(row[p])) if p in row and pd.notna(row[p]) else "FAIL"
+            for p in PIPELINES.keys()
+        ]
+        table_rows.append([name] + values)
+
+    fig, ax = plt.subplots(figsize=(8, max(1.5, len(table_rows) * 0.6 + 1.2)))
     ax.axis("off")
 
     tbl = ax.table(
-        cellText=rows,
-        colLabels=col_labels,
+        cellText=table_rows,
+        colLabels=col_headers,
         cellLoc="center",
         loc="center",
     )
@@ -102,9 +103,9 @@ def render_table_as_png(data, metric_index, title, filepath):
     tbl.set_fontsize(13)
     tbl.scale(1.2, 2.0)
 
-    for j in range(len(col_labels)):
+    for j in range(len(col_headers)):
         tbl[0, j].set_text_props(fontweight="bold")
-        tbl[0, j].set_facecolor("#e0e0e0")
+        tbl[0, j].set_facecolor(light_blue)
 
     ax.set_title(title, fontsize=14, pad=12)
 
@@ -117,11 +118,13 @@ def main():
     
     setup_plotting_directories(ROOT_DIR_PATH / "real-benchmarks" / "data", ROOT_DIR_PATH / "real-benchmarks" / "plots"
     )
-    df = collect_data(PIPELINES)
+    df_instructions, df_cycles, df_uops = collect_data(PIPELINES)
     
-    df.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_data.csv", index=False)
+    df_instructions.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_instruction.csv", index=False)
+    df_cycles.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_cycles.csv", index=False)
+    df_uops.to_csv(ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_uops.csv", index=False)
     
-    if df.empty:
+    if df_instructions.empty or df_cycles.empty or df_uops.empty:
         print("No .out files found.", file=sys.stderr)
         sys.exit(1)
 
@@ -132,9 +135,7 @@ def main():
         (
             "tot_instructions_table_real.tex",
             latex_table(
-                df,
-                metric_index=0,
-                metric_label="instructions",
+                df_instructions,
                 caption="\#instructions per iteration.",
                 label="tab:real-instructions",
             ),
@@ -142,40 +143,34 @@ def main():
         (
             "num_cycles_table_real.tex",
             latex_table(
-                df,
-                metric_index=1,
-                metric_label="cycles",
+                df_cycles,
                 caption="\#cycles per iteration.",
                 label="tab:real-cycles",
             ),
         ),
     ]
 
-    # png_tables = [
-    #     (
-    #         "num_cycles_table_real.png",
-    #         1,
-    #         "#Cycles per iteration",
-    #     ),
-    #     (
-    #         "tot_instructions_table_real.png",
-    #         0,
-    #         "#Instructions per iteration",
-    #     ),
-    # ]
+    png_tables = [
+        (
+            df_cycles,
+            "num_cycles_table_real.png",
+            "#Cycles per iteration",
+        ),
+        (
+            df_instructions,
+            "tot_instructions_table_real.png",
+            "#Instructions per iteration",
+        ),
+    ]
 
-    # for filename, content in tables:
-    #     path = data_dir / filename
-    #     path.write_text(content + "\n")
-    #     print(f"Written {path}")
 
-    # plots = []
+    plots = []
 
-    # for filename, metric_index, title in png_tables:
-    #     path = data_dir / filename
-    #     render_table_as_png(data, metric_index, title, path)
-    #     plots.append(path)
-    #     print(f"Written {path}")
+    for data, filename, title in png_tables:
+        path = data_dir / filename
+        render_table_as_png(data, title, path)
+        plots.append(path)
+        print(f"Written {path}")
 
     # upload_to_zulip(
     #     root_dir(),

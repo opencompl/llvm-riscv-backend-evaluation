@@ -101,17 +101,24 @@ def parse_mca_file(path):
     return instructions, total_cycles, uops
 
 def collect_data(PIPELINES):
-    """Return a DataFrame indexed by benchmark name, one column per pipeline,
-    each cell an (instructions, cycles, uops) tuple (NaN if that pipeline has
-    no result for that benchmark)."""
-    data = {}
+    """Return three DataFrames (instructions, cycles, uops), each indexed by
+    benchmark name with one column per pipeline (NaN if that pipeline has no
+    result for that benchmark)."""
+    instructions, cycles, uops = {}, {}, {}
     for pipeline, directory in PIPELINES.items():
         if not directory.exists():
             continue
         for path in sorted(directory.glob("*.out")):
             name = path.stem
-            data.setdefault(name, {})[pipeline] = parse_mca_file(path)
-    return pd.DataFrame.from_dict(data, orient="index")
+            i, c, u = parse_mca_file(path)
+            instructions.setdefault(name, {})[pipeline] = i
+            cycles.setdefault(name, {})[pipeline] = c
+            uops.setdefault(name, {})[pipeline] = u
+    return (
+        pd.DataFrame.from_dict(instructions, orient="index"),
+        pd.DataFrame.from_dict(cycles, orient="index"),
+        pd.DataFrame.from_dict(uops, orient="index"),
+    )
 
 
 def scatter_plot(parameter, selector1, selector2, data_dir, plots_dir):
