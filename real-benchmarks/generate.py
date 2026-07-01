@@ -2,24 +2,24 @@
 #
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["xdsl"]
+# dependencies = ["xdsl", "utils"]
 #
 # [tool.uv.sources]
 # xdsl = { path = "../xdsl" }
+# utils = { path = "../utils" }
 # ///
-import importlib.util
+
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
+from utils.generate import strip_target_info, vcc_emit_mlir
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'benchmarks'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "benchmarks"))
 
-from generate import (
+from utils.generate import (
     setup_benchmarking_directories,
     cleanup_empty_logs,
-    run_command,
     MLIR_opt,
     LLVM_opt,
     MLIR_to_LLVM,
@@ -29,23 +29,16 @@ from generate import (
     VEIR,
     veir2mir_step,
     LLC_mir_regalloc,
-    sanitize,
-    rewrite_value_attr_to_immediate,
     extract_basic_block,
-    rename_numeric_block_labels,
     replace_bool_constants,
-    replace_hyphens_in_variables,
 )
-
 
 
 ROOT_DIR_PATH = Path(
-    subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    .decode()
-    .strip()
+    subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
-TIMEOUT_SEC = 1800
+TIMEOUT = 1800
 
 LLC_GLOBALISEL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_GlobalISel_ASM/"
 
@@ -91,41 +84,17 @@ BENCHMARKS = [
 ]
 
 
-def strip_target_info(file_path):
-    """Remove host target info from an LLVMIR file.
+def main():
 
-    mlir-translate embeds the host (x86-64) triple and CPU/feature attributes,
-    which makes llc refuse to compile for RISC-V even when -march=riscv64 is
-    passed. We strip the module-level triple/datalayout lines and the
-    per-function target-cpu/target-features/tune-cpu attribute pairs.
-    """
-    import re
-    _target_attr = re.compile(r'\s*"(?:target-cpu|target-features|tune-cpu)"="[^"]*"')
-
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-    with open(file_path, "w") as f:
-        for line in lines:
-            if line.startswith("target triple") or line.startswith("target datalayout"):
-                continue
-            f.write(_target_attr.sub("", line))
-
-
-def vcc_emit_mlir(input_file, output_file, log_file, pass_dict):
-    vcc = ROOT_DIR_PATH / "veir" / "Tools" / "vcc"
-    cmd = f"{vcc} --emit-mlir -O {input_file} -o {output_file}"
-    ret_code = run_command(cmd, log_file)
-    pass_dict[output_file] = ret_code
-
-
-def generate_real_benchmarks():
     setup_benchmarking_directories(AUTOGEN_DIR_PATHS)
 
     vcc_file2ret = dict()
     for src in BENCHMARKS:
         output_file = os.path.join(MLIR_init_DIR_PATH, src.stem + ".mlir")
         log_file = open(os.path.join(LOGS_DIR_PATH, src.stem + "_vcc.log"), "w")
-        vcc_emit_mlir(str(src), output_file, log_file, vcc_file2ret)
+        vcc_emit_mlir(
+            str(src), output_file, log_file, vcc_file2ret, ROOT_DIR_PATH, TIMEOUT
+        )
         print(f"compiled {src.name} with vcc")
 
     MLIR_opt_file2ret = dict()
@@ -201,9 +170,7 @@ def generate_real_benchmarks():
         # only run the lowering if the previous pass was successful:
         if llvmir_file2ret[input_file] == 0:
             basename, _ = os.path.splitext(filename)
-            output_file = os.path.join(
-                LLC_ASM_selectiondag_DIR_PATH, basename + ".s"
-            )
+            output_file = os.path.join(LLC_ASM_selectiondag_DIR_PATH, basename + ".s")
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_selectiondag_llc.log"),
                 "w",
@@ -229,7 +196,7 @@ def generate_real_benchmarks():
             LLC_globalisel(
                 input_file, output_file, log_file, LLC_GLOBALISEL_file2ret, ""
             )
-            
+
         percentage = (float(idx) / float(len(llvmir_file2ret))) * 100
         idx += 1
         print(f"compiling with llc (globalISel): {percentage:.2f}%")
@@ -260,7 +227,14 @@ def generate_real_benchmarks():
 
     LAKE_file2ret_opt = dict()
     # Run the optimized lean pass in parallel
-    VEIR(1, LAKE_file2ret_opt, MLIR_bb0_VEIR_DIR_PATH, VEIR_ASM_DIR_PATH, LOGS_DIR_PATH, ROOT_DIR_PATH)
+    VEIR(
+        1,
+        LAKE_file2ret_opt,
+        MLIR_bb0_VEIR_DIR_PATH,
+        VEIR_ASM_DIR_PATH,
+        LOGS_DIR_PATH,
+        ROOT_DIR_PATH,
+    )
 
     veir2mir_file2ret = dict()
     idx = 0
@@ -289,11 +263,9 @@ def generate_real_benchmarks():
         percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
         print(f"register allocating veir MIR with llc: {percentage:.2f}%")
 
-    return cleanup_empty_logs(LOGS_DIR_PATH)
+    e = cleanup_empty_logs(LOGS_DIR_PATH)
 
-
-def main():
-    sys.exit(generate_real_benchmarks())
+    sys.exit(e)
 
 
 if __name__ == "__main__":

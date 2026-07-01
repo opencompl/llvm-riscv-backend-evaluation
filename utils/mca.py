@@ -38,18 +38,20 @@ def run_mca_file(input_file, output_file, log_file, root_dir):
     """
     Run MCA performance analysis on the RISCV asm `input_file`.
     """
-    cmd_base = "llvm-mca -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+m,+zba,+zbb,+zbs,+zicond "
+    cmd_base = (
+        "llvm-mca -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+m,+zba,+zbb,+zbs,+zicond "
+    )
     cmd = cmd_base + input_file + " > " + output_file
     run_command(cmd, log_file, 1800, root_dir)
 
 
-def run_mca_folder(input_dir, output_dir, log_dir, log_index, root_dir) :
+def run_mca_folder(input_dir, output_dir, log_dir, log_index, root_dir):
     idx = 0
     for filename in os.listdir(input_dir):
         input_file = os.path.join(input_dir, filename)
         basename, _ = os.path.splitext(filename)
-        output_file = os.path.join(output_dir, basename + '.out')
-        log_file = open(os.path.join(log_dir, log_index + filename), 'w')
+        output_file = os.path.join(output_dir, basename + ".out")
+        log_file = open(os.path.join(log_dir, log_index + filename), "w")
         run_mca_file(input_file, output_file, log_file, root_dir)
         idx += 1
         percentage = ((float(idx)) / float(len(os.listdir(input_dir)))) * 100

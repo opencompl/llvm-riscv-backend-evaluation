@@ -11,7 +11,7 @@ import math
 import logging
 from num2words import num2words
 from utils import upload_zulip
-from datetime import datetime 
+from datetime import datetime
 
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["font.size"] = 20
@@ -786,30 +786,41 @@ def create_latex_command(parameters, filename, data_dir, ROOT_DIR_PATH, VEIR_PIP
 
     f.close()
 
-def upload_to_zulip(lib_root_dir, lib_machine_username, lib_machine_hostname, lib_machine_uname, lib_git_hash, captions, plots):
+
+def upload_to_zulip(
+    lib_root_dir,
+    lib_machine_username,
+    lib_machine_hostname,
+    lib_machine_uname,
+    lib_git_hash,
+    captions,
+    plots,
+):
     client = upload_zulip.Client(lib_root_dir / "zuliprc")
     builder = upload_zulip.ContentBuilder()
 
-    
-
-    builder.add_info(f"Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}")
-    builder.add_info(f"Machine(`{lib_machine_username}@{lib_machine_hostname}`): `{lib_machine_uname}`")
+    builder.add_info(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    builder.add_info(
+        f"Machine(`{lib_machine_username}@{lib_machine_hostname}`): `{lib_machine_uname}`"
+    )
     builder.add_info(f"Upload from repository git hash `{lib_git_hash}`")
-    
+
     for c, p in zip(captions, plots):
         builder.add_image(c, p)
 
     out = builder.build(client)
 
-    dry_run = False
+    dry_run = True
     if dry_run:
         logging.info("--- Upload ---")
         logging.info(out)
         logging.info("---")
     else:
-        client.send_message({
-            "type": "stream",
-            "to": "Project - Lean4  - RISCV backend verification",
-            "topic": "EvalBot",
-            "content": out,
-        })
+        client.send_message(
+            {
+                "type": "stream",
+                "to": "Project - Lean4  - RISCV backend verification",
+                "topic": "EvalBot",
+                "content": out,
+            }
+        )

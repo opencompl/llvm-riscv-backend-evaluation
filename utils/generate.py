@@ -139,10 +139,10 @@ def replace_hyphens_in_variables(file_path):
         print(f"An unexpected error occurred: {e}")
 
 
-def run_command(cmd, log_file, timeout, ROOT_DIR_PATH):
+def run_command(cmd, log_file, timeout, root_dir):
     try:
         ret_code = subprocess.Popen(
-            cmd, cwd=ROOT_DIR_PATH, stdout=log_file, stderr=log_file, shell=True
+            cmd, cwd=root_dir, stdout=log_file, stderr=log_file, shell=True
         ).wait(timeout=timeout)
         return ret_code
     except subprocess.TimeoutExpired:
@@ -193,7 +193,7 @@ def extract(input_dir, output_base, max_functions, type):
         extract_helper(input_dir, output_base, max_functions, base_name)
 
 
-def MLIR_opt(input_file, output_file, log_file, pass_dict):
+def MLIR_opt(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run mlir-opt and convert a file into LLVM dialect.
     """
@@ -201,41 +201,43 @@ def MLIR_opt(input_file, output_file, log_file, pass_dict):
         "mlir-opt -convert-arith-to-llvm -convert-func-to-llvm --mlir-print-op-generic "
     )
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLVM_opt(input_file, output_file, log_file, pass_dict):
+def LLVM_opt(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run opt with `O2` on an LLVM file.
     """
     cmd_base = "opt -O2 -vectorize-slp=0 -vectorize-loops=0 -S "
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLVM_to_MLIR(input_file, output_file, log_file, pass_dict):
+def LLVM_to_MLIR(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
     """
     cmd_base = "mlir-translate --import-llvm --mlir-print-op-generic "
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def MLIR_to_LLVM(input_file, output_file, log_file, pass_dict):
+def MLIR_to_LLVM(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
     """
     cmd_base = "mlir-translate --mlir-to-llvmir "
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLC_selectiondag(input_file, output_file, log_file, pass_dict, opt):
+def LLC_selectiondag(
+    input_file, output_file, log_file, pass_dict, opt, root_dir, timeout
+):
     """
     Compile LLVMIR to RISCV assembly with llc.
     """
@@ -243,11 +245,13 @@ def LLC_selectiondag(input_file, output_file, log_file, pass_dict, opt):
         "llc -march=riscv64 -mcpu=generic-rv64 -mattr=+m,+b -filetype=asm " + opt + " "
     )
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLC_globalisel(input_file, output_file, log_file, pass_dict, opt):
+def LLC_globalisel(
+    input_file, output_file, log_file, pass_dict, opt, root_dir, timeout
+):
     """
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
@@ -257,7 +261,7 @@ def LLC_globalisel(input_file, output_file, log_file, pass_dict, opt):
         + " "
     )
     cmd = cmd_base + input_file + " -o " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
@@ -329,6 +333,7 @@ def VEIR(
     VEIR_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     ROOT_DIR_PATH,
+    TIMEOUT,
 ):
     """
     Lower the input file to RISCV with VeIR, using multiple threads.
@@ -343,7 +348,7 @@ def VEIR(
             log_file = open(LOGS_DIR_PATH + basename + "_lake.log", "w")
             cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" '
             cmd = cmd_base + input_file + " > " + output_file
-            future = executor.submit(run_command, cmd, log_file)
+            future = executor.submit(run_command, cmd, log_file, TIMEOUT, ROOT_DIR_PATH)
             futures[future] = output_file
 
         total = len(futures)
@@ -355,13 +360,13 @@ def VEIR(
             print(f"compiling with veir {percentage:.2f}%")
 
 
-def XDSL_create_func(input_file, output_file, log_file, pass_dict, ROOT_DIR_PATH):
+def XDSL_create_func(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Remove unrealized casts from the RISCV64 dialect MLIR files with xdsl.
     """
-    cmd_base = f"python3 {ROOT_DIR_PATH}/benchmarks/create_func.py "
+    cmd_base = f"python3 {root_dir}/utils/create_func.py "
     cmd = cmd_base + input_file + " > " + output_file
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
@@ -382,17 +387,47 @@ def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
         pass_dict[output_file] = 0
 
 
-def veir2mir_step(input_file, output_file, log_file, pass_dict, VEIR2MIR_BIN):
+def veir2mir_step(
+    input_file, output_file, log_file, pass_dict, VEIR2MIR_BIN, root_dir, timeout
+):
     cmd = f"{VEIR2MIR_BIN} {input_file} > {output_file}"
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict):
+def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     cmd = (
         "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
         f" --start-before=phi-node-elimination -filetype=asm"
         f" -o {output_file} {input_file}"
     )
-    ret_code = run_command(cmd, log_file)
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
+    pass_dict[output_file] = ret_code
+
+
+def strip_target_info(file_path):
+    """Remove host target info from an LLVMIR file.
+
+    mlir-translate embeds the host (x86-64) triple and CPU/feature attributes,
+    which makes llc refuse to compile for RISC-V even when -march=riscv64 is
+    passed. We strip the module-level triple/datalayout lines and the
+    per-function target-cpu/target-features/tune-cpu attribute pairs.
+    """
+    import re
+
+    _target_attr = re.compile(r'\s*"(?:target-cpu|target-features|tune-cpu)"="[^"]*"')
+
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+    with open(file_path, "w") as f:
+        for line in lines:
+            if line.startswith("target triple") or line.startswith("target datalayout"):
+                continue
+            f.write(_target_attr.sub("", line))
+
+
+def vcc_emit_mlir(input_file, output_file, log_file, pass_dict, root_dir, timeout):
+    vcc = root_dir / "veir" / "Tools" / "vcc"
+    cmd = f"{vcc} --emit-mlir -O {input_file} -o {output_file}"
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
