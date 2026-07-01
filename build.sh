@@ -12,8 +12,6 @@ XDSL_VENV="$BUILD_DIR/xdsl-venv"
 
 info() { echo "[build] $*"; }
 
-# --- LLVM / MLIR -------------------------------------------------------------
-
 info "Configuring LLVM..."
 cmake -G Ninja \
     -S "$LLVM_SRC/llvm" \
@@ -26,15 +24,14 @@ cmake -G Ninja \
 info "Building LLVM..."
 ninja -C "$LLVM_BUILD"
 
-# --- xDSL --------------------------------------------------------------------
-
 info "Setting up xDSL virtualenv..."
 uv venv "$XDSL_VENV" --python python3
 uv pip install --python "$XDSL_VENV" -e "$XDSL_SRC"
 
-# --- VeIR --------------------------------------------------------------------
 
 export PATH="$LLVM_INSTALL/bin:$PATH"
 
 info "Building VeIR..."
 (cd "$VEIR_SRC" && lake build)
+
+uv build utils
