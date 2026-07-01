@@ -8,7 +8,7 @@
 all: pipeline
 
 pipeline: 
-	uv run synthetic-benchmarks/generate.py -j 32
+	uv run synthetic-benchmarks/generate.py -j 4
 	uv run synthetic-benchmarks/mca.py
 	uv run synthetic-benchmarks/plot.py
 	
