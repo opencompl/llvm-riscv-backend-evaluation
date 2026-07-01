@@ -47,33 +47,33 @@ ROOT_DIR_PATH = (
 TIMEOUT = 1800
 
 
-LLVM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM/"
-LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
+LLVM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVM/"
+LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVMIR/"
 
-MLIR_bb0_VEIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_bb0_veir/"
-MLIR_single_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_single/"
-MLIR_multi_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_multi/"
+MLIR_bb0_VEIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_bb0_veir/"
+MLIR_single_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_single/"
+MLIR_multi_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_multi/"
 
 
-LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_selectiondag/"
+LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLC_ASM_selectiondag/"
 
-LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLC_ASM_globalisel/"
-VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_ASM/"
-VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_MIR/"
-VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/VEIR_REGALLOC_ASM/"
+LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLC_ASM_globalisel/"
+VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/VEIR_ASM/"
+VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/VEIR_MIR/"
+VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/VEIR_REGALLOC_ASM/"
 
 VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 VEIROPT_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir-opt"
 
-LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVM_preopt/"
+LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVM_preopt/"
 
-MLIR_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/MLIR_preopt/"
+MLIR_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_preopt/"
 
-XDSL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/XDSL_ASM/"
+XDSL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/XDSL_ASM/"
 
-XDSL_FUNC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/XDSL_FUNC/"
+XDSL_FUNC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/XDSL_FUNC/"
 
-LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/logs/"
+LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/logs/"
 
 
 AUTOGEN_DIR_PATHS = [

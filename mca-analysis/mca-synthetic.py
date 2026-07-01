@@ -11,11 +11,11 @@ ROOT_DIR = (
 )
 TIMEOUT = 1800  # seconds
 
-LLC_ASM_globalisel_DIR = f"{ROOT_DIR}/benchmarks/LLC_ASM_globalisel/"
-LLC_ASM_selectiondag_DIR = f"{ROOT_DIR}/benchmarks/LLC_ASM_selectiondag/"
-LLC_ASM_DIR = f"{ROOT_DIR}/benchmarks/LLC_ASM/"
-XDSL_ASM_DIR = f"{ROOT_DIR}/benchmarks/XDSL_ASM/"
-VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/benchmarks/VEIR_REGALLOC_ASM/"
+LLC_ASM_globalisel_DIR = f"{ROOT_DIR}/synthetic-benchmarks/LLC_ASM_globalisel/"
+LLC_ASM_selectiondag_DIR = f"{ROOT_DIR}/synthetic-benchmarks/LLC_ASM_selectiondag/"
+LLC_ASM_DIR = f"{ROOT_DIR}/synthetic-benchmarks/LLC_ASM/"
+XDSL_ASM_DIR = f"{ROOT_DIR}/synthetic-benchmarks/XDSL_ASM/"
+VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/synthetic-benchmarks/VEIR_REGALLOC_ASM/"
 MCA_VEIR_XDSL_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_xdsl/"
 MCA_VEIR_LLVM_DIR = f"{ROOT_DIR}/mca-analysis/results/VEIR_llvm/"
 

@@ -66,7 +66,7 @@ ROOT_DIR_PATH = (
     .strip()
 )
 
-LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/benchmarks/LLVMIR/"
+LLVMIR_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVMIR/"
 
 PIPELINES = {
     "LLVM_globalisel": f"{ROOT_DIR_PATH}/mca-analysis/results/LLVM_globalisel/",

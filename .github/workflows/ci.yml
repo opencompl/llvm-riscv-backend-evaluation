@@ -66,8 +66,8 @@ jobs:
       - name: Build utils
         run: uv build utils
 
-      - name: Generate benchmarks
-        run: uv run benchmarks/generate.py -j 4 -n 100
+      - name: Generate synthetic benchmarks
+        run: uv run synthetic-benchmarks/generate.py -j 4 -n 100
 
       - name: Generate real benchmarks
         run: uv run real-benchmarks/generate.py

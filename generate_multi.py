@@ -14,7 +14,7 @@ ROOT_DIR_PATH = (
 )
 
 MLIR_multi_DIR_PATH = (
-    f"{ROOT_DIR_PATH}/benchmarks/MLIR_multi/"
+    f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_multi/"
 )
 
 
