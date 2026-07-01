@@ -120,9 +120,6 @@ def main():
     )
 
     setup_plotting_directories(data_dir, plots_dir)
-    build_similarity_dataframe(PIPELINES, VEIR_PIPELINES, LLVM_PIPELINES).to_csv(
-        data_dir + "similarity.csv", index=False
-    )
 
     df_instructions, df_cycles, df_uops = build_comparison_dataframes(PIPELINES)
     df_instructions.to_csv(data_dir + "tot_instructions.csv", index=False)
