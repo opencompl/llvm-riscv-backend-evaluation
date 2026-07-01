@@ -79,6 +79,8 @@ AUTOGEN_DIR_PATHS = [
     MLIR_OPTIMIZED_DIR_PATH,
 ]
 
+VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
+
 BENCHMARKS = [
     ROOT_DIR_PATH / "veir" / "Test" / "Vcc" / "fastntt.c",
 ]
@@ -105,7 +107,9 @@ def main():
         basename, _ = os.path.splitext(filename)
         output_file = os.path.join(LLVM_DIR_PATH, basename + ".ll")
         log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_mlir_opt.log"), "w")
-        MLIR_opt(input_file, output_file, log_file, MLIR_opt_file2ret)
+        MLIR_opt(
+            input_file, output_file, log_file, MLIR_opt_file2ret, ROOT_DIR_PATH, TIMEOUT
+        )
         percentage = (float(idx) / float(len(os.listdir(MLIR_init_DIR_PATH)))) * 100
         idx += 1
         print(f"translating to LLVM with mlir-opt: {percentage:.2f}%")
@@ -122,7 +126,14 @@ def main():
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_mlir_translate.log"), "w"
             )
-            MLIR_to_LLVM(input_file, output_file, log_file, MLIR_translate_file2ret)
+            MLIR_to_LLVM(
+                input_file,
+                output_file,
+                log_file,
+                MLIR_translate_file2ret,
+                ROOT_DIR_PATH,
+                TIMEOUT,
+            )
             if MLIR_translate_file2ret.get(output_file) == 0:
                 strip_target_info(output_file)
         idx += 1
@@ -140,7 +151,14 @@ def main():
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_llvm_preopt.log"), "w"
             )
-            LLVM_opt(input_file, output_file, log_file, llvmir_file2ret)
+            LLVM_opt(
+                input_file,
+                output_file,
+                log_file,
+                llvmir_file2ret,
+                ROOT_DIR_PATH,
+                TIMEOUT,
+            )
         idx += 1
         percentage = (float(idx) / float(len(MLIR_translate_file2ret))) * 100
         print(f"preoptimizing with opt -O2: {percentage:.2f}%")
@@ -157,7 +175,14 @@ def main():
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_import_llvm.log"), "w"
             )
-            LLVM_to_MLIR(input_file, output_file, log_file, MLIR_preopt_file2ret)
+            LLVM_to_MLIR(
+                input_file,
+                output_file,
+                log_file,
+                MLIR_preopt_file2ret,
+                ROOT_DIR_PATH,
+                TIMEOUT,
+            )
         idx += 1
         percentage = (float(idx) / float(len(llvmir_file2ret))) * 100
         print(f"importing LLVM IR to MLIR: {percentage:.2f}%")
@@ -175,7 +200,15 @@ def main():
                 os.path.join(LOGS_DIR_PATH, basename + "_selectiondag_llc.log"),
                 "w",
             )
-            LLC_selectiondag(input_file, output_file, log_file, LLC_file2ret, "")
+            LLC_selectiondag(
+                input_file,
+                output_file,
+                log_file,
+                LLC_file2ret,
+                "",
+                ROOT_DIR_PATH,
+                TIMEOUT,
+            )
         percentage = (float(idx) / float(len(llvmir_file2ret))) * 100
         idx += 1
         print(f"compiling with llc (selectionDAG): {percentage:.2f}%")
@@ -194,7 +227,13 @@ def main():
                 "w",
             )
             LLC_globalisel(
-                input_file, output_file, log_file, LLC_GLOBALISEL_file2ret, ""
+                input_file,
+                output_file,
+                log_file,
+                LLC_GLOBALISEL_file2ret,
+                "",
+                ROOT_DIR_PATH,
+                TIMEOUT,
             )
 
         percentage = (float(idx) / float(len(llvmir_file2ret))) * 100
@@ -234,6 +273,7 @@ def main():
         VEIR_ASM_DIR_PATH,
         LOGS_DIR_PATH,
         ROOT_DIR_PATH,
+        TIMEOUT,
     )
 
     veir2mir_file2ret = dict()
@@ -243,7 +283,15 @@ def main():
         basename, _ = os.path.splitext(filename)
         output_file = os.path.join(VEIR_MIR_DIR_PATH, basename + ".mir")
         log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_veir2mir.log"), "w")
-        veir2mir_step(input_file, output_file, log_file, veir2mir_file2ret)
+        veir2mir_step(
+            input_file,
+            output_file,
+            log_file,
+            veir2mir_file2ret,
+            VEIR2MIR_BIN,
+            ROOT_DIR_PATH,
+            TIMEOUT,
+        )
         idx += 1
         percentage = (float(idx) / float(len(os.listdir(VEIR_ASM_DIR_PATH)))) * 100
         print(f"converting to pre-RA MIR with veir2mir: {percentage:.2f}%")
@@ -258,7 +306,14 @@ def main():
             log_file = open(
                 os.path.join(LOGS_DIR_PATH, basename + "_veir_regalloc.log"), "w"
             )
-            LLC_mir_regalloc(input_file, output_file, log_file, veir_regalloc_file2ret)
+            LLC_mir_regalloc(
+                input_file,
+                output_file,
+                log_file,
+                veir_regalloc_file2ret,
+                ROOT_DIR_PATH,
+                TIMEOUT,
+            )
         idx += 1
         percentage = (float(idx) / float(len(veir2mir_file2ret))) * 100
         print(f"register allocating veir MIR with llc: {percentage:.2f}%")
