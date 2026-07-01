@@ -144,6 +144,22 @@ def main():
     data_dir = ROOT_DIR_PATH / "real-benchmarks" / "data"
     data_dir.mkdir(exist_ok=True)
 
+    tex_tables = [
+        (df_cycles, "num_cycles_table_real.tex", "#Cycles per iteration"),
+        (
+            df_instructions,
+            "tot_instructions_table_real.tex",
+            "#Instructions per iteration",
+        ),
+    ]
+    for data, filename, caption in tex_tables:
+        path = data_dir / filename
+        latex_content = latex_table(data, caption, filename.replace(".tex", ""))
+        with open(path, "w") as f:
+            f.write(latex_content)
+        print(f"Written {path}")    
+    
+
     png_tables = [
         (
             df_cycles,
