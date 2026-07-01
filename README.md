@@ -139,6 +139,8 @@ summary commands, and an optional Zulip upload).
 `table.py` parses those results into LaTeX and PNG tables of #instructions and #cycles per
 iteration, saved into `data/`, and optionally uploads them to Zulip.
 
+To add a new real benchmark it is sufficient to add the path of the `.c` file to the `BENCHMARKS` list in `generate.py`.
+
 ## `utils/` module
 
 Shared library backing both pipelines, installed as an editable path dependency:
