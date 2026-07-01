@@ -15,8 +15,6 @@ def cleanup_empty_logs(LOGS_DIR_PATH):
         else:
             err += 1
             print(log_path)
-            with open(log_path, "r", errors="replace") as f:
-                print(f.read())
     print(f"{err} failed lowerings.")
     return err
 
@@ -29,6 +27,7 @@ def setup_benchmarking_directories(AUTOGEN_DIR_PATHS):
         if not os.path.exists(directory):
             os.makedirs(directory)
         else:
+            print(f"Directory {directory} already exists. Cleaning up...")
             shutil.rmtree(directory)
             os.makedirs(directory)
 
@@ -179,27 +178,17 @@ def extract_helper(input_file, output_base, max_functions, base_name):
             break
 
 
-def extract(input_dir, output_base, max_functions, type):
-    if type:
-        for filename in os.listdir(input_dir):
-            input_file = os.path.join(input_dir, filename)
-            instruction_name = "".join(filename.split(".")[0])
-            extract_helper(
-                input_file, output_base, max_functions, f"{instruction_name}_"
-            )
-    else:
-        size = input_dir.split("_")[-1].split(".")[0]
-        base_name = f"{size}_function_"
-        extract_helper(input_dir, output_base, max_functions, base_name)
+def extract(input_dir, output_base, max_functions):
+    size = input_dir.split("_")[-1].split(".")[0]
+    base_name = f"{size}_function_"
+    extract_helper(input_dir, output_base, max_functions, base_name)
 
 
 def MLIR_opt(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run mlir-opt and convert a file into LLVM dialect.
     """
-    cmd_base = (
-        "mlir-opt -convert-arith-to-llvm -convert-func-to-llvm --mlir-print-op-generic "
-    )
+    cmd_base = "mlir-opt -convert-func-to-llvm --mlir-print-op-generic "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
@@ -235,31 +224,21 @@ def MLIR_to_LLVM(input_file, output_file, log_file, pass_dict, root_dir, timeout
     pass_dict[output_file] = ret_code
 
 
-def LLC_selectiondag(
-    input_file, output_file, log_file, pass_dict, opt, root_dir, timeout
-):
+def LLC_selectiondag(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Compile LLVMIR to RISCV assembly with llc.
     """
-    cmd_base = (
-        "llc -march=riscv64 -mcpu=generic-rv64 -mattr=+m,+b -filetype=asm " + opt + " "
-    )
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 -mattr=+m,+b -filetype=asm "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
 
 
-def LLC_globalisel(
-    input_file, output_file, log_file, pass_dict, opt, root_dir, timeout
-):
+def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
-    cmd_base = (
-        "llc -march=riscv64 -mcpu=generic-rv64 --global-isel -mattr=+m,+b -filetype=asm "
-        + opt
-        + " "
-    )
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 --global-isel -mattr=+m,+b -filetype=asm "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
@@ -333,6 +312,7 @@ def VEIR(
     VEIR_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     ROOT_DIR_PATH,
+    VEIROPT_BIN,
     TIMEOUT,
 ):
     """
@@ -345,8 +325,8 @@ def VEIR(
             input_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename)
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
-            log_file = open(LOGS_DIR_PATH + basename + "_lake.log", "w")
-            cmd_base = f'cd {ROOT_DIR_PATH}/veir; lake exec veir-opt -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" '
+            log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_lake.log"), "w")
+            cmd_base = f'{VEIROPT_BIN} -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce,riscv-combine" '
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file, TIMEOUT, ROOT_DIR_PATH)
             futures[future] = output_file
@@ -356,8 +336,9 @@ def VEIR(
             file_path = futures[future]
             ret_code = future.result()
             pass_dict[file_path] = ret_code
+            idx += 1
             percentage = (float(idx) / float(total)) * 100
-            print(f"compiling with veir {percentage:.2f}%")
+            print(f"[veir]: {percentage:.2f}%")
 
 
 def XDSL_create_func(input_file, output_file, log_file, pass_dict, root_dir, timeout):
@@ -370,7 +351,7 @@ def XDSL_create_func(input_file, output_file, log_file, pass_dict, root_dir, tim
     pass_dict[output_file] = ret_code
 
 
-def XDSL_regalloc(input_file, output_file, log_file, pass_dict):
+def XDSL_regalloc(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Remove unrealized casts from the RISCV64 dialect MLIR files with xdsl and allocate registers.
     """
@@ -431,3 +412,91 @@ def vcc_emit_mlir(input_file, output_file, log_file, pass_dict, root_dir, timeou
     cmd = f"{vcc} --emit-mlir -O {input_file} -o {output_file}"
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
+
+
+def apply_lowering_to_folder(
+    input_folder,
+    output_folder,
+    log_folder,
+    input_dict,
+    output_dict,
+    lowering_fun,
+    root_dir,
+    timeout,
+    pass_name,
+    file_ext,
+    post_process_fun=None,
+):
+    idx = 0
+    # Run pass on all the files in the folder
+    for filename in os.listdir(input_folder):
+        input_file = os.path.join(input_folder, filename)
+        # only run the lowering if the previous pass was successful
+        if input_dict[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(output_folder, basename + file_ext)
+            log_file = open(
+                os.path.join(log_folder, basename + "_" + pass_name.lower() + ".log"),
+                "w",
+            )
+            lowering_fun(
+                input_file,
+                output_file,
+                log_file,
+                output_dict,
+                root_dir,
+                timeout,
+            )
+            if post_process_fun:
+                post_process_fun(output_file)
+        else:
+            print(f"FAILURE: Skipping {input_file} because previous pass failed.")
+        idx += 1
+        percentage = (float(idx) / float(len(input_dict))) * 100
+        print(f"[{pass_name}]: {percentage:.2f}%")
+
+
+def extract_basic_block_folder(input_folder, output_folder, log_folder):
+    idx = 0
+    for filename in os.listdir(input_folder):
+        input_file = os.path.join(input_folder, filename)
+        basename, _ = os.path.splitext(filename)
+        output_file = os.path.join(output_folder, basename + ".mlir")
+        log_file = open(os.path.join(log_folder, basename + "_bb0_extract.log"), "w")
+        extract_basic_block(input_file, output_file, log_file)
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(input_folder)))) * 100
+        print(f"[extract-bb0]: {percentage:.2f}%")
+
+
+def VEIR2MIR(
+    input_folder,
+    output_folder,
+    log_folder,
+    input_dict,
+    pass_dict,
+    veir2mirbin,
+    root_dir,
+    timeout,
+):
+    idx = 0
+    for filename in os.listdir(input_folder):
+        input_file = os.path.join(input_folder, filename)
+        if input_dict[input_file] == 0:
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(output_folder, basename + ".mir")
+            log_file = open(os.path.join(log_folder, basename + "_veir2mir.log"), "w")
+            veir2mir_step(
+                input_file,
+                output_file,
+                log_file,
+                pass_dict,
+                veir2mirbin,
+                root_dir,
+                timeout,
+            )
+        else:
+            print(f"FAILURE: Skipping {input_file} because previous pass failed.")
+        idx += 1
+        percentage = (float(idx) / float(len(os.listdir(input_folder)))) * 100
+        print(f"[veir2mir]: {percentage:.2f}%")

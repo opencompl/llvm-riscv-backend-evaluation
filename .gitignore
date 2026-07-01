@@ -39,6 +39,5 @@ real-benchmarks/VEIR_REGALLOC_ASM
 utils/build/
 utils/__pycache__/
 utils/utils.egg-info/
-mca-analysis/.ruff_cache
 uv.lock 
-utils/__pycache__
+llvm_riscv_backend_evaluation.egg-info/
