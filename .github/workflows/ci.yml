@@ -85,10 +85,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           pdftoppm -r 150 -png \
-            synthetic-benchmarks/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.pdf \
+            synthetic-benchmarks/plots/proportional_tot_cycles_VEIR_llvm_vs_LLVM_globalisel.pdf \
             /tmp/tot_cycles_globalisel_plot
           pdftoppm -r 150 -png \
-            synthetic-benchmarks/plots/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag.pdf \
+            synthetic-benchmarks/plots/proportional_tot_cycles_VEIR_llvm_vs_LLVM_selectiondag.pdf \
             /tmp/tot_cycles_selectiondag_plot
 
       - name: Post PR comment with plots
