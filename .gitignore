@@ -11,7 +11,6 @@ synthetic-benchmarks/MLIR_bb0
 synthetic-benchmarks/MLIR_bb0_veir
 synthetic-benchmarks/MLIR_preopt
 synthetic-benchmarks/LLVM_preopt
-synthetic-benchmarks/MLIR_multi
 synthetic-benchmarks/MLIR_single
 synthetic-benchmarks/VEIR_ASM
 synthetic-benchmarks/XDSL_FUNC
