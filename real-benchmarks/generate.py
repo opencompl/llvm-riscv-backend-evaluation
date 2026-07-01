@@ -76,6 +76,7 @@ VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 
 BENCHMARKS = [
     ROOT_DIR_PATH / "veir" / "Test" / "Vcc" / "fastntt.c",
+    ROOT_DIR_PATH / "veir" / "Test" / "Vcc" / "chacha20.c",
 ]
 
 
