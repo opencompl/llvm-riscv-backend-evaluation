@@ -40,3 +40,5 @@ utils/build/
 utils/__pycache__/
 utils/utils.egg-info/
 mca-analysis/.ruff_cache
+uv.lock 
+utils/__pycache__
