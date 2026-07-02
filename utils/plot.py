@@ -483,6 +483,7 @@ def geomean_ratio(df, parameter, selector1, selector2):
     """Compute the geometric mean of the ratio of two selectors for a given parameter."""
     df["ratios"] = df[selector1] / df[selector2]
     geomean = np.exp(np.log(df["ratios"]).mean())
+    # print(f"Geomean {selector1}/{selector2} for {parameter}: {geomean}")
     return geomean
 
 def max_ratio(df, parameter, selector1, selector2):
