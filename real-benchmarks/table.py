@@ -145,11 +145,11 @@ def main():
     data_dir.mkdir(exist_ok=True)
 
     tex_tables = [
-        (df_cycles, "num_cycles_table_real.tex", "#Cycles per iteration"),
+        (df_cycles, "num_cycles_table_real.tex", "\\#Cycles per iteration"),
         (
             df_instructions,
             "tot_instructions_table_real.tex",
-            "#Instructions per iteration",
+            "\\#Instructions per iteration",
         ),
     ]
     for data, filename, caption in tex_tables:

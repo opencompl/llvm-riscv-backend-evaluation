@@ -470,6 +470,7 @@ def compare_mca_diff_performance(df, parameter, selector1, selector2):
     """Compare the % of identical performance values of two selectors for a given parameter."""
     num_identical = (df[selector1] == df[selector2]).sum()
     perc_identical = (num_identical / len(df)) * 100
+    print(f"same performance on {parameter} for {selector1} vs. {selector2} for {perc_identical} programs.")
     return perc_identical
     
 def compare_distribution_mca(df, parameter, selector1, selector2):
