@@ -464,6 +464,10 @@ def compare_mca_diff_by_size(folder1, folder2, sizes):
         perc = (identical_files / len(files_with_size)) * 100
         print(f"Percentage of identical files, {folder1.name} vs {folder2.name}, size {size}: {perc:.2f}%")
 
+def compare_mca_diff_performance(df, parameter, selector1, selector2): 
+    num_identical = (df[selector1] == df[selector2]).sum()
+    perc_identical = (num_identical / len(df)) * 100
+    print(f"Percentage of identical {parameter} values, {selector1} vs {selector2}: {perc_identical:.2f}%")
 
 def create_latex_command(param_dfs, filename, ROOT_DIR_PATH, VEIR_PIPELINES):
     f = open(filename, "w")

@@ -16,6 +16,7 @@ from utils.plot import (
     upload_to_zulip,
     compare_mca_diff_all,
     compare_mca_diff_by_size,
+    compare_mca_diff_performance
 )
 
 from utils.lib import (
@@ -164,16 +165,25 @@ def main():
     #     plots_dir + "proportional_tot_instructions_VEIR_llvm_vs_LLVM_selectiondag.pdf"
     # )
     
-    compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag")
-    compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel")
-    compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag")
-    compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel")
+    # compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag")
+    # compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel")
+    # compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag")
+    # compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel")
     
-    sizes = [3,4,5,6,7,8]
-    compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag", sizes)
-    compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel", sizes)
-    compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag", sizes)
-    compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    # sizes = [3,4,5,6,7,8]
+    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    
+    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
 
     # upload_to_zulip(
     #     root_dir(),
