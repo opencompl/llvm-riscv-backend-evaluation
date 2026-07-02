@@ -531,7 +531,7 @@ def create_latex_command(file, commands):
     """Create a LaTeX command to store the value of a variable."""
     for name, value in commands.items():
         with open(file, "a") as f:
-            f.write(f"\\newcommand{{{name}}}{{{float(value):.2f}}}\n")
+            f.write(f"\\newcommand{{\\{name}}}{{{float(value):.2f}}}\n")
 
 def upload_to_zulip(
     lib_root_dir,

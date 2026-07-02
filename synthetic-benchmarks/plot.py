@@ -220,28 +220,28 @@ def main():
     # percentage of files in the same ratio class for number of instructions
     d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
     for c in classes:
-        commands[f"percInstructionClass{c}VeirllvmVsSdag"] = float(d.get(c, 0))
+        commands[f"percInstructionClass{classes[c]}VeirllvmVsSdag"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
     for c in classes:
-        commands[f"percInstructionClass{c}VeirxdslVsSdag"] = float(d.get(c, 0))
+        commands[f"percInstructionClass{classes[c]}VeirxdslVsSdag"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
     for c in classes:
-        commands[f"percInstructionClass{c}VeirllvmVsGisel"] = float(d.get(c, 0))
+        commands[f"percInstructionClass{classes[c]}VeirllvmVsGisel"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
     for c in classes:
-        commands[f"percInstructionClass{c}VeirxdslVsGisel"] = float(d.get(c, 0))
+        commands[f"percInstructionClass{classes[c]}VeirxdslVsGisel"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
     for c in classes:
-        commands[f"percCyclesClass{c}VeirllvmVsSdag"] = float(d.get(c, 0))
+        commands[f"percCyclesClass{classes[c]}VeirllvmVsSdag"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
     for c in classes:
-        commands[f"percCyclesClass{c}VeirxdslVsSdag"] = float(d.get(c, 0))
+        commands[f"percCyclesClass{classes[c]}VeirxdslVsSdag"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
     for c in classes:
-        commands[f"percCyclesClass{c}VeirllvmVsGisel"] = float(d.get(c, 0))
+        commands[f"percCyclesClass{classes[c]}VeirllvmVsGisel"] = float(d.get(c, 0))
     d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
     for c in classes:
-        commands[f"percCyclesClass{c}VeirxdslVsGisel"] = float(d.get(c, 0))
+        commands[f"percCyclesClass{classes[c]}VeirxdslVsGisel"] = float(d.get(c, 0))
     
     # Geomean ratio between number of instructions
     p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
