@@ -424,6 +424,46 @@ def convert_pdf_to_jpg(pdf_path):
     images[0].save(jpg_path, "JPEG")
     return jpg_path
 
+def compare_mca_diff_all(folder1, folder2):
+    """Compare the .out files in two folders and print the differences."""
+    identical_files = 0
+    for file1 in sorted(folder1.glob("*.out")):
+        file2 = folder2 / file1.name
+        if not file2.exists():
+            print(f"FAILURE: File {file2} does not exist.")
+            sys.exit(1)
+
+        with open(file1) as f1, open(file2) as f2:
+            lines1 = f1.readlines()
+            lines2 = f2.readlines()
+
+        diff = [line for line in lines1 if line not in lines2]
+        if len(diff) == 0:
+            identical_files += 1
+    perc = (identical_files / len(list(folder1.glob("*.out")))) * 100
+    print(f"Percentage of identical files, {folder1.name} vs {folder2.name}: {perc:.2f}%")
+    
+def compare_mca_diff_by_size(folder1, folder2, sizes):
+    """Compare the .out files in two folders and print the differences."""
+    for size in sizes:
+        identical_files = 0
+        files_with_size = [file for file in folder1.glob("*.out") if file.name.split("_")[0] == str(size)]
+        for file1 in sorted(files_with_size):
+            file2 = folder2 / file1.name
+            if not file2.exists():
+                print(f"FAILURE: File {file2} does not exist.")
+                sys.exit(1)
+
+            with open(file1) as f1, open(file2) as f2:
+                lines1 = f1.readlines()
+                lines2 = f2.readlines()
+
+            diff = [line for line in lines1 if line not in lines2]
+            if len(diff) == 0:
+                identical_files += 1
+        perc = (identical_files / len(files_with_size)) * 100
+        print(f"Percentage of identical files, {folder1.name} vs {folder2.name}, size {size}: {perc:.2f}%")
+
 
 def create_latex_command(param_dfs, filename, ROOT_DIR_PATH, VEIR_PIPELINES):
     f = open(filename, "w")
