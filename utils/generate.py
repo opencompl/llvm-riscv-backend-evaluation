@@ -378,7 +378,7 @@ def veir2mir_step(
 
 def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     cmd = (
-        "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
+        "llc -mtriple=riscv64 -x mir -run-pass=phi-node-elimination,registercoalescer,greedy,virtregrewriter,prologepilog,postrapseudos -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
         f" --start-before=phi-node-elimination -filetype=asm"
         f" -o {output_file} {input_file}"
     )
