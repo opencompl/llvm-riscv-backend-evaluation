@@ -16,7 +16,14 @@ from utils.plot import (
     upload_to_zulip,
     compare_mca_diff_all,
     compare_mca_diff_by_size,
-    compare_mca_diff_performance
+    compare_mca_diff_performance,
+    compare_distribution_mca,
+    geomean_ratio, 
+    max_ratio,
+    min_ratio,
+    geomean_ratio_by_size,
+    max_ratio_by_size,
+    min_ratio_by_size,
 )
 
 from utils.lib import (
@@ -85,6 +92,14 @@ data_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/data/"
 plots_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/plots/"
 
 
+classes = {
+    "<1x" : "A", 
+    "1x" : "B",
+    "1x-1.5x" : "C",
+    "1.5x-2x" : "D",
+    ">2x" : "E",
+}
+
 def main():
 
     setup_plotting_directories(data_dir, plots_dir)
@@ -105,98 +120,162 @@ def main():
         lambda x: int(x.split("_")[0]) if "_" in x else None
     )
     
-    # # Stacked bar plots 
-    # stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    # Stacked bar plots 
+    stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    stacked_bar_plot_perc(df_uops, "tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
     
     
-    # # Violin plots 
+    # Violin plots 
     
-    # violin_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # violin_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # violin_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # violin_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # violin_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # violin_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # violin_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    violin_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    violin_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
 
 
-    # # Proportional bar plots
-    # proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
-    # proportional_bar_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
-    # proportional_bar_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
-    # proportional_bar_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    # Proportional bar plots
+    proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    proportional_bar_plot(df_instructions,"tot_instructions", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    proportional_bar_plot(df_cycles,"tot_cycles", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
+    proportional_bar_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_globalisel", data_dir, plots_dir)
+    proportional_bar_plot(df_uops,"tot_uops", "VEIR_llvm", "LLVM_selectiondag", data_dir, plots_dir)
+    proportional_bar_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
 
 
-    # create_latex_command(
-    #     {"tot_cycles": df_cycles, "tot_instructions": df_instructions},
-    #     plots_dir + "numerical_commands.tex",
-    #     ROOT_DIR_PATH,
-    #     VEIR_PIPELINES,
-    # )
-
-    # jpg_plot1 = convert_pdf_to_jpg(
-    #     plots_dir + "proportional_tot_cycles_VEIR_llvm_vs_LLVM_selectiondag.pdf"
-    # )
-    # jpg_plot2 = convert_pdf_to_jpg(
-    #     plots_dir + "proportional_tot_instructions_VEIR_llvm_vs_LLVM_selectiondag.pdf"
-    # )
+    jpg_plot1 = convert_pdf_to_jpg(
+        plots_dir + "proportional_tot_cycles_VEIR_llvm_vs_LLVM_selectiondag.pdf"
+    )
+    jpg_plot2 = convert_pdf_to_jpg(
+        plots_dir + "proportional_tot_instructions_VEIR_llvm_vs_LLVM_selectiondag.pdf"
+    )
     
-    # compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag")
-    # compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel")
-    # compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag")
-    # compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel")
+    sizes = [3, 4, 5, 6, 7, 8]
+    commands = {}
     
-    # sizes = [3,4,5,6,7,8]
-    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag", sizes)
-    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel", sizes)
-    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag", sizes)
-    # compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag")
+    commands["percIdenticalMCAResultsVeirllvmVsSdag"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel")
+    commands["percIdenticalMCAResultsVeirxdslVsSdag"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag")
+    commands["percIdenticalMCAResultsVeirllvmVsGisel"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel")
+    commands["percIdenticalMCAResultsVeirxdslVsGisel"] = float(p)
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirllvmVsSdagSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirllvmVsGiselSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirxdslVsSdagSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirxdslVsGiselSize{s}"] = float(p[s])
     
-    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
-    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
-    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
-    compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
-    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
-    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
-    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
-    compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
+    # percentage of files with identical number of instructions according to MCA analysis
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    commands["percIdenticalInstructionsVEIRllvmVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    commands["percIdenticalInstructionsVEIRxdslVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    commands["percIdenticalInstructionsVEIRllvmVsGisel"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    commands["percIdenticalInstructionsVEIRxdslVsGisel"] = float(p)
 
-    # upload_to_zulip(
-    #     root_dir(),
-    #     machine_username(),
-    #     machine_hostname(),
-    #     machine_uname(),
-    #     git_hash(),
-    #     [
-    #         "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-    #         "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-    #     ],
-    #     [jpg_plot1, jpg_plot2],
-    # )
+    # percentage of files with identical number of cycles according to MCA analysis
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    commands["percIdenticalCyclesVEIRllvmVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    commands["percIdenticalCyclesVEIRxdslVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    commands["percIdenticalCyclesVEIRllvmVsGisel"] = float(p)  
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")   
+    commands["percIdenticalCyclesVEIRxdslVsGisel"] = float(p)
+
+    # percentage of files in the same ratio class for number of instructions
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percInstructionClass{c}VeirllvmVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percInstructionClass{c}VeirxdslVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percInstructionClass{c}VeirllvmVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percInstructionClass{c}VeirxdslVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percCyclesClass{c}VeirllvmVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percCyclesClass{c}VeirxdslVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percCyclesClass{c}VeirllvmVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percCyclesClass{c}VeirxdslVsGisel"] = float(d.get(c, 0))
+    
+    # Geomean ratio between number of instructions
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsSdag"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsSdag"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsGisel"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsGisel"] = float(d[c])
+    # Geomean ratio between number of cycles
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsSdag"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsSdag"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsGisel"] = float(d[c])
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsGisel"] = float(d[c])
+    
+    create_latex_command(plots_dir + "numerical_commands.tex", commands)
+    
+    upload_to_zulip(
+        root_dir(),
+        machine_username(),
+        machine_hostname(),
+        machine_uname(),
+        git_hash(),
+        [
+            "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+            "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+        ],
+        [jpg_plot1, jpg_plot2],
+    )
 
 
 if __name__ == "__main__":

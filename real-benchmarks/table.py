@@ -67,7 +67,7 @@ def latex_table(df, caption, label):
             str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
             for p in PIPELINES.keys()
         ]
-        lines += [rf"        {row['benchmark']} & {' & '.join(values)} \\"]
+        lines += [rf"        \texttt{{{row['benchmark']}}} & {' & '.join(values)} \\"]
 
     lines += [
         r"        \bottomrule",
