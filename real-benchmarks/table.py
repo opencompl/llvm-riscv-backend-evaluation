@@ -68,7 +68,7 @@ def latex_table(df, caption, label):
             str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
             for p in PIPELINES.keys()
         ]
-        lines += [rf"        {row['benchmark']} & {' & '.join(values)} \\"]
+        lines += [rf"        \texttt{{{row['benchmark']}}} & {' & '.join(values)} \\"]
 
     lines += [
         r"        \bottomrule",
@@ -146,11 +146,11 @@ def main(upload=True):
     data_dir.mkdir(exist_ok=True)
 
     tex_tables = [
-        (df_cycles, "num_cycles_table_real.tex", "#Cycles per iteration"),
+        (df_cycles, "num_cycles_table_real.tex", "\\#Cycles per iteration"),
         (
             df_instructions,
             "tot_instructions_table_real.tex",
-            "#Instructions per iteration",
+            "\\#Instructions per iteration",
         ),
     ]
     for data, filename, caption in tex_tables:

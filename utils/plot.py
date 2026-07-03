@@ -250,7 +250,9 @@ def stacked_bar_plot_perc(df, parameter, selector1, selector2, data_dir, plots_d
         print(f"{selector1} vs. {selector2} {parameter}: {instr_num}, Top 5 programs with highest ratio:")
         for _, row in top_5.iterrows():
             print(f"  Benchmark: {row['benchmark']}, Ratio: {row['diff']:.2f}")
-
+            
+    reindexed = group.reindex(columns=class_order, fill_value=0.0)
+    
     # Colors for each class
     class_colors = {
         "<1x": light_blue,
@@ -261,7 +263,7 @@ def stacked_bar_plot_perc(df, parameter, selector1, selector2, data_dir, plots_d
     }
 
     # Stacked plot: one column per value of `init_instr`, with the % of each diff_class stacked on top of each other
-    group.plot(kind="bar", stacked=True, color=[class_colors[c] for c in class_order], figsize=(10, 5))
+    reindexed.plot(kind="bar", stacked=True, color=[class_colors[c] for c in class_order], figsize=(10, 5))
 
     plt.xlabel("#Instructions - LLVM IR")
     plt.xticks(rotation=0)
@@ -424,106 +426,116 @@ def convert_pdf_to_jpg(pdf_path):
     images[0].save(jpg_path, "JPEG")
     return jpg_path
 
+def compare_mca_diff_all(folder1, folder2):
+    """Compare the .out files in two folders."""
+    identical_files = 0
+    for file1 in sorted(folder1.glob("*.out")):
+        file2 = folder2 / file1.name
+        if not file2.exists():
+            print(f"FAILURE: File {file2} does not exist.")
+            sys.exit(1)
 
-def create_latex_command(param_dfs, filename, ROOT_DIR_PATH, VEIR_PIPELINES):
-    f = open(filename, "w")
+        with open(file1) as f1, open(file2) as f2:
+            lines1 = f1.readlines()
+            lines2 = f2.readlines()
 
-    git_command = ["git", "rev-parse", "--short", "HEAD"]
-    result = subprocess.run(
-        git_command, cwd=ROOT_DIR_PATH, capture_output=True, text=True, check=True
-    )
+        diff = [line for line in lines1 if line not in lines2]
+        if len(diff) == 0:
+            identical_files += 1
+    perc = (identical_files / len(list(folder1.glob("*.out")))) * 100
+    return perc
+    
+def compare_mca_diff_by_size(folder1, folder2, sizes):
+    """Compare the .out files in two folders with the specified sizes."""
+    percs = {}
+    for size in sizes:
+        identical_files = 0
+        files_with_size = [file for file in folder1.glob("*.out") if file.name.split("_")[0] == str(size)]
+        for file1 in sorted(files_with_size):
+            file2 = folder2 / file1.name
+            if not file2.exists():
+                print(f"FAILURE: File {file2} does not exist.")
+                sys.exit(1)
 
-    commit_hash = result.stdout.strip()
+            with open(file1) as f1, open(file2) as f2:
+                lines1 = f1.readlines()
+                lines2 = f2.readlines()
 
-    f.write(f"% Veir commit hash: {commit_hash}\n")
+            diff = [line for line in lines1 if line not in lines2]
+            if len(diff) == 0:
+                identical_files += 1
+        perc = (identical_files / len(files_with_size)) * 100
+        percs[size] = perc
+    return percs
 
-    f.write("% In the following commands the following rules apply:\n")
-    f.write("% A: class  <1x\n")
-    f.write("% B: class 1x\n")
-    f.write("% C: class 1x-1.5x\n")
-    f.write("% D: class 1.5x-2x\n")
-    f.write("% E: class >2x\n")
-    f.write("\n\n")
+def compare_mca_diff_performance(df, parameter, selector1, selector2): 
+    """Compare the % of identical performance values of two selectors for a given parameter."""
+    num_identical = (df[selector1] == df[selector2]).sum()
+    perc_identical = (num_identical / len(df)) * 100
+    print(f"same performance on {parameter} for {selector1} vs. {selector2} for {perc_identical} programs.")
+    return perc_identical
+    
+def compare_distribution_mca(df, parameter, selector1, selector2):
+    """Compare the distribution of performance values of two selectors for a given parameter according to the classsification."""
+    df["ratios"] = df[selector1] / df[selector2]
+    df["ratios_class"] = df["ratios"].apply(classify)
+    distribution = df["ratios_class"].value_counts(normalize=True).sort_index() * 100
+    return distribution
 
-    # print the percentage of programs in each of the above classes, for each number of instructions
-    for p, df in param_dfs.items():
-        df["ratios_gisel_sdag"] = df["LLVM_globalisel"] / df["LLVM_selectiondag"]
-        df["ratios_gisel_sdag_class"] = df["ratios_gisel_sdag"].apply(classify)
-        max_ratio_gisel_sdag = df["ratios_gisel_sdag"].max()
-        min_ratio_gisel_sdag = df["ratios_gisel_sdag"].min()
+def geomean_ratio(df, parameter, selector1, selector2):
+    """Compute the geometric mean of the ratio of two selectors for a given parameter."""
+    df["ratios"] = df[selector1] / df[selector2]
+    geomean = np.exp(np.log(df["ratios"]).mean())
+    # print(f"Geomean {selector1}/{selector2} for {parameter}: {geomean}")
+    return geomean
 
-        p_label = "NumCycles" if p == "tot_cycles" else "NumInstr"
+def max_ratio(df, parameter, selector1, selector2):
+    """Compute the maximum of the ratio of two selectors for a given parameter."""
+    df["ratios"] = df[selector1] / df[selector2]
+    max_ratio = df["ratios"].max()
+    return max_ratio
 
-        f.write(
-            f"\\newcommand{{\\MaxRatioGiselVsSdagParam{p_label}}}{{{max_ratio_gisel_sdag:.2f}}}\n"
-        )
-        f.write(
-            f"\\newcommand{{\\MinRatioGiselVsSdagParam{p_label}}}{{{min_ratio_gisel_sdag:.2f}}}\n"
-        )
+def min_ratio(df, parameter, selector1, selector2):
+    """Compute the minimum of the ratio of two selectors for a given parameter."""
+    df["ratios"] = df[selector1] / df[selector2]
+    min_ratio = df["ratios"].min()
+    return min_ratio
+    
+def geomean_ratio_by_size(df, parameter, selector1, selector2, sizes):
+    """Compute the geometric mean of the ratio of two selectors for a given parameter and sizes."""
+    geomeans = {}
+    for size in sizes:
+        df_size = df[df["init_instr"] == size]
+        df_size["ratios"] = df_size[selector1] / df_size[selector2]
+        geomean = np.exp(np.log(df_size["ratios"]).mean())
+        geomeans[size] = geomean
+    return geomeans
 
-        df_grouped_gisel_sdag = (
-            df.groupby("init_instr")["ratios_gisel_sdag_class"]
-            .value_counts(normalize=True)
-            .reset_index()
-        )
-        df_grouped_gisel_sdag["proportion"] *= 100
-        for _, row in df_grouped_gisel_sdag.iterrows():
-            c = row["ratios_gisel_sdag_class"]
-            instructions_number = num2words(row["init_instr"])
-            f.write(
-                f"\\newcommand{{\\PercGiselVsSdagParam{p_label}Class{c}Instr{instructions_number}}}{{{int(row['proportion'])}\%}}\n"
-            )
+def max_ratio_by_size(df, parameter, selector1, selector2, sizes):
+    """Compute the maximum of the ratio of two selectors for a given parameter and sizes."""
+    max_ratios = {}
+    for size in sizes:
+        df_size = df[df["init_instr"] == size]
+        df_size["ratios"] = df_size[selector1] / df_size[selector2]
+        max_ratio = df_size["ratios"].max()
+        max_ratios[size] = max_ratio
+    return max_ratios
 
-        for vp in VEIR_PIPELINES:
-            vp_label = "Xdsl" if vp == "VEIR_xdsl" else "Llvm"
-            for lp, lp_label in [
-                ("LLVM_globalisel", "Gisel"),
-                ("LLVM_selectiondag", "Sdag"),
-            ]:
-                ratio_col = f"ratios_{vp_label}_{lp_label}"
-                df[ratio_col] = df[vp] / df[lp]
-                df[ratio_col + "_class"] = df[ratio_col].apply(classify)
-
-                f.write(
-                    f"\\newcommand{{\\MaxRatioVEIR{vp_label}Vs{lp_label}Param{p_label}}}{{{df[ratio_col].max():.2f}}}\n"
-                )
-                f.write(
-                    f"\\newcommand{{\\MinRatioVEIR{vp_label}Vs{lp_label}Param{p_label}}}{{{df[ratio_col].min():.2f}}}\n"
-                )
-
-                grouped = (
-                    df.groupby("init_instr")[ratio_col + "_class"]
-                    .value_counts(normalize=True)
-                    .reset_index()
-                )
-                grouped["proportion"] *= 100
-                for _, row in grouped.iterrows():
-                    c = row[ratio_col + "_class"]
-                    instr_w = num2words(row["init_instr"])
-                    f.write(
-                        f"\\newcommand{{\\PercVEIR{vp_label}Vs{lp_label}Param{p_label}Class{c}Instr{instr_w}}}{{{int(row['proportion'])}\%}}\n"
-                    )
-
-                geomeans = df.groupby("init_instr")[ratio_col].apply(
-                    lambda x: np.exp(np.log(x).mean())
-                )
-                for instr_num, gm in geomeans.items():
-                    instr_w = num2words(instr_num)
-                    f.write(
-                        f"\\newcommand{{\\GeomeanVEIR{vp_label}Vs{lp_label}Param{p_label}Instr{instr_w}}}{{{gm:.1f}}}\n"
-                    )
-
-                gm_tot = np.exp(np.log(df[ratio_col]).mean())
-                gm_tot_perc = (gm_tot - 1) * 100
-                f.write(
-                    f"\\newcommand{{\\GeomeanTotVEIR{vp_label}Vs{lp_label}{p_label}}}{{{gm_tot:.1f}}}\n"
-                )
-                f.write(
-                    f"\\newcommand{{\\GeomeanTotVEIR{vp_label}Vs{lp_label}SlowDownPerc{p_label}}}{{{gm_tot_perc:.1f}\%}}\n"
-                )
-
-    f.close()
-
+def min_ratio_by_size(df, parameter, selector1, selector2, sizes):
+    """Compute the minimum of the ratio of two selectors for a given parameter and sizes."""
+    min_ratios = {}
+    for size in sizes:
+        df_size = df[df["init_instr"] == size]
+        df_size["ratios"] = df_size[selector1] / df_size[selector2]
+        min_ratio = df_size["ratios"].min()
+        min_ratios[size] = min_ratio
+    return min_ratios
+    
+def create_latex_command(file, commands):
+    """Create a LaTeX command to store the value of a variable."""
+    for name, value in commands.items():
+        with open(file, "a") as f:
+            f.write(f"\\newcommand{{\\{name}}}{{{float(value):.2f}}}\n")
 
 def upload_to_zulip(
     lib_root_dir,

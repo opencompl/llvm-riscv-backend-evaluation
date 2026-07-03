@@ -3,6 +3,7 @@
 import subprocess
 import matplotlib
 from pathlib import Path
+import argparse
 
 import pandas as pd
 from utils.plot import (
@@ -14,6 +15,16 @@ from utils.plot import (
     convert_pdf_to_jpg,
     setup_plotting_directories,
     upload_to_zulip,
+    compare_mca_diff_all,
+    compare_mca_diff_by_size,
+    compare_mca_diff_performance,
+    compare_distribution_mca,
+    geomean_ratio, 
+    max_ratio,
+    min_ratio,
+    geomean_ratio_by_size,
+    max_ratio_by_size,
+    min_ratio_by_size,
 )
 
 from utils.lib import (
@@ -82,7 +93,15 @@ data_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/data/"
 plots_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/plots/"
 
 
-def main():
+classes = {
+    "<1x" : "A", 
+    "1x" : "B",
+    "1x-1.5x" : "C",
+    "1.5x-2x" : "D",
+    ">2x" : "E",
+}
+
+def main(upload=True):
 
     setup_plotting_directories(data_dir, plots_dir)
 
@@ -148,19 +167,107 @@ def main():
     proportional_bar_plot(df_uops,"tot_uops", "VEIR_xdsl", "LLVM_selectiondag", data_dir, plots_dir)
 
 
-    create_latex_command(
-        {"tot_cycles": df_cycles, "tot_instructions": df_instructions},
-        plots_dir + "numerical_commands.tex",
-        ROOT_DIR_PATH,
-        VEIR_PIPELINES,
-    )
-
     jpg_plot1 = convert_pdf_to_jpg(
         plots_dir + "proportional_tot_cycles_VEIR_llvm_vs_LLVM_selectiondag.pdf"
     )
     jpg_plot2 = convert_pdf_to_jpg(
         plots_dir + "proportional_tot_instructions_VEIR_llvm_vs_LLVM_selectiondag.pdf"
     )
+    
+    sizes = [3, 4, 5, 6, 7, 8]
+    commands = {}
+    
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag")
+    commands["percIdenticalMCAResultsVeirllvmVsSdag"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel")
+    commands["percIdenticalMCAResultsVeirxdslVsSdag"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag")
+    commands["percIdenticalMCAResultsVeirllvmVsGisel"] = float(p)
+    p = compare_mca_diff_all(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel")
+    commands["percIdenticalMCAResultsVeirxdslVsGisel"] = float(p)
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirllvmVsSdagSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_llvm" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirllvmVsGiselSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_selectiondag", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirxdslVsSdagSize{s}"] = float(p[s])
+    p = compare_mca_diff_by_size(RESULTS_DIR / "VEIR_xdsl" , RESULTS_DIR / "LLVM_globalisel", sizes)
+    for s in sizes: 
+        commands[f"percIdenticalMCAResultsVeirxdslVsGiselSize{s}"] = float(p[s])
+    
+    # percentage of files with identical number of instructions according to MCA analysis
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    commands["percIdenticalInstructionsVEIRllvmVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    commands["percIdenticalInstructionsVEIRxdslVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    commands["percIdenticalInstructionsVEIRllvmVsGisel"] = float(p)
+    p = compare_mca_diff_performance(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    commands["percIdenticalInstructionsVEIRxdslVsGisel"] = float(p)
+
+    # percentage of files with identical number of cycles according to MCA analysis
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    commands["percIdenticalCyclesVEIRllvmVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    commands["percIdenticalCyclesVEIRxdslVsSdag"] = float(p)
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    commands["percIdenticalCyclesVEIRllvmVsGisel"] = float(p)  
+    p = compare_mca_diff_performance(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")   
+    commands["percIdenticalCyclesVEIRxdslVsGisel"] = float(p)
+
+    # percentage of files in the same ratio class for number of instructions
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percInstructionClass{classes[c]}VeirllvmVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percInstructionClass{classes[c]}VeirxdslVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percInstructionClass{classes[c]}VeirllvmVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percInstructionClass{classes[c]}VeirxdslVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percCyclesClass{classes[c]}VeirllvmVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    for c in classes:
+        commands[f"percCyclesClass{classes[c]}VeirxdslVsSdag"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percCyclesClass{classes[c]}VeirllvmVsGisel"] = float(d.get(c, 0))
+    d = compare_distribution_mca(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
+    for c in classes:
+        commands[f"percCyclesClass{classes[c]}VeirxdslVsGisel"] = float(d.get(c, 0))
+    
+    # Geomean ratio between number of instructions
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsSdag"] = float(p)
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_selectiondag")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsSdag"] = float(p)
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_llvm", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirllvmVsGisel"] = float(p)
+    p = geomean_ratio(df_instructions, "tot_instructions", "VEIR_xdsl", "LLVM_globalisel")
+    commands[f"GeomeanInstructionsRatioVeirxdslVsGisel"] = float(p)
+    # Geomean ratio between number of cycles
+    p = geomean_ratio(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_selectiondag")
+    commands[f"GeomeanCyclesRatioVeirllvmVsSdag"] = float(p)
+    p = geomean_ratio(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_selectiondag")
+    commands[f"GeomeanCyclesRatioVeirxdslVsSdag"] = float(p)
+    p = geomean_ratio(df_cycles, "tot_cycles", "VEIR_llvm", "LLVM_globalisel")
+    commands[f"GeomeanCyclesRatioVeirllvmVsGisel"] = float(p)
+    p = geomean_ratio(df_cycles, "tot_cycles", "VEIR_xdsl", "LLVM_globalisel")
+    commands[f"GeomeanCyclesRatioVeirxdslVsGisel"] = float(p)
+    
+    create_latex_command(plots_dir + "numerical_commands.tex", commands)
+    
+    if not upload:
+        print("Skipping Zulip upload (--no-upload).")
+        return
 
     upload_to_zulip(
         root_dir(),
@@ -177,4 +284,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        prog="table-real",
+        description="Build #instructions/#cycles tables for real benchmarks.",
+    )
+    parser.add_argument(
+        "--no-upload",
+        action="store_true",
+        help="Write CSV/TeX/PNG tables locally but do not upload to Zulip.",
+    )
+    args = parser.parse_args()
+    main(upload=not args.no_upload)
+
