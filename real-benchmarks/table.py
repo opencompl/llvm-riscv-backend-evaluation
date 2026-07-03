@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -119,7 +120,7 @@ def render_table_as_png(df, title, filepath):
     plt.close()
 
 
-def main():
+def main(upload=True):
 
     setup_plotting_directories(
         ROOT_DIR_PATH / "real-benchmarks" / "data",
@@ -181,6 +182,10 @@ def main():
         plots.append(path)
         print(f"Written {path}")
 
+    if not upload:
+        print("Skipping Zulip upload (--no-upload).")
+        return
+
     upload_to_zulip(
         root_dir(),
         machine_username(),
@@ -196,4 +201,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        prog="table-real",
+        description="Build #instructions/#cycles tables for real benchmarks.",
+    )
+    parser.add_argument(
+        "--no-upload",
+        action="store_true",
+        help="Write CSV/TeX/PNG tables locally but do not upload to Zulip.",
+    )
+    args = parser.parse_args()
+    main(upload=not args.no_upload)
