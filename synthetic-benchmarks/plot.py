@@ -3,6 +3,7 @@
 import subprocess
 import matplotlib
 from pathlib import Path
+import argparse
 
 import pandas as pd
 from utils.plot import (
@@ -264,19 +265,34 @@ def main():
     
     create_latex_command(plots_dir + "numerical_commands.tex", commands)
     
-    # upload_to_zulip(
-    #     root_dir(),
-    #     machine_username(),
-    #     machine_hostname(),
-    #     machine_uname(),
-    #     git_hash(),
-    #     [
-    #         "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-    #         "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-    #     ],
-    #     [jpg_plot1, jpg_plot2],
-    # )
+    if not upload:
+        print("Skipping Zulip upload (--no-upload).")
+        return
+
+    upload_to_zulip(
+        root_dir(),
+        machine_username(),
+        machine_hostname(),
+        machine_uname(),
+        git_hash(),
+        [
+            "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+            "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+        ],
+        [jpg_plot1, jpg_plot2],
+    )
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        prog="table-real",
+        description="Build #instructions/#cycles tables for real benchmarks.",
+    )
+    parser.add_argument(
+        "--no-upload",
+        action="store_true",
+        help="Write CSV/TeX/PNG tables locally but do not upload to Zulip.",
+    )
+    args = parser.parse_args()
+    main(upload=not args.no_upload)
+
