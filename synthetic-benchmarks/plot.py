@@ -101,7 +101,7 @@ classes = {
     ">2x" : "E",
 }
 
-def main():
+def main(uppload=True):
 
     setup_plotting_directories(data_dir, plots_dir)
 
