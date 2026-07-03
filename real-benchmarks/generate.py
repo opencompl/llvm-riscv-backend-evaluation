@@ -19,6 +19,7 @@ from utils.generate import (
     setup_benchmarking_directories,
     cleanup_empty_logs,
     LLVM_opt,
+    LLVM_opt_unroll,
     MLIR_to_LLVM,
     LLVM_to_MLIR,
     LLC_selectiondag,
@@ -126,6 +127,20 @@ def generate_benchmarks(jobs):
         TIMEOUT,
         "LLVM-opt",
         ".ll",
+    )
+    
+    # LLVM opt with unrolling
+    apply_lowering_to_folder(
+        LLVMIR_DIR_PATH,
+        LLVM_OPTIMIZED_DIR_PATH,
+        LOGS_DIR_PATH,
+        MLIR_translate_file2ret,
+        llvmir_file2ret,
+        LLVM_opt_unroll,
+        ROOT_DIR_PATH,
+        TIMEOUT,
+        "LLVM-opt",
+        "_unrolled.ll",
     )
 
     # LLVM IR to MLIR to extract bb0
