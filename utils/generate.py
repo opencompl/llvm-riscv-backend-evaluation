@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import re
+import tempfile
 import concurrent.futures
 
 
@@ -228,7 +229,7 @@ def LLC_selectiondag(input_file, output_file, log_file, pass_dict, root_dir, tim
     """
     Compile LLVMIR to RISCV assembly with llc.
     """
-    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 -mattr=+m,+b -filetype=asm "
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond -filetype=asm "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
@@ -238,7 +239,7 @@ def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeo
     """
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
-    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 --global-isel -mattr=+m,+b -filetype=asm "
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 --global-isel -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond -filetype=asm "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
@@ -377,12 +378,33 @@ def veir2mir_step(
 
 
 def LLC_mir_regalloc(input_file, output_file, log_file, pass_dict, root_dir, timeout):
+    # Stage 1 runs exactly our register-allocation pass pipeline. Because
+    # -run-pass forces llc to emit MIR (it ignores -filetype=asm), stage 2 takes
+    # that post-regalloc MIR and continues the standard backend from where the
+    # pipeline stopped (after postrapseudos) to emit assembly for llvm-mca. The
+    # intermediate MIR goes to a temp file so it does not get picked up as a
+    # benchmark by the folder-globbing MCA step.
+    #
+    # No LLVM instruction scheduler runs on the VEIR side: stage 1's -run-pass
+    # list contains no pre-RA scheduler, and stage 2 passes -disable-post-ra to
+    # drop the post-RA scheduler while still keeping block placement (so branch
+    # fallthrough is preserved and code size is not inflated by -O0).
+    mattr = "+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
+    fd, regalloc_mir = tempfile.mkstemp(suffix=".mir")
+    os.close(fd)
     cmd = (
-        "llc -march=riscv64 -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond"
-        f" --start-before=phi-node-elimination -filetype=asm"
-        f" -o {output_file} {input_file}"
+        f"llc -mtriple=riscv64 -mcpu=generic-rv64 -x mir -mattr={mattr}"
+        " -run-pass=phi-node-elimination,register-coalescer,greedy,virtregrewriter,prologepilog,postrapseudos"
+        f" -o {regalloc_mir} {input_file}"
+        f" && llc -mtriple=riscv64 -mcpu=generic-rv64 -x mir -mattr={mattr}"
+        f" --start-after=postrapseudos -disable-post-ra -filetype=asm"
+        f" -o {output_file} {regalloc_mir}"
     )
-    ret_code = run_command(cmd, log_file, timeout, root_dir)
+    try:
+        ret_code = run_command(cmd, log_file, timeout, root_dir)
+    finally:
+        if os.path.exists(regalloc_mir):
+            os.remove(regalloc_mir)
     pass_dict[output_file] = ret_code
 
 

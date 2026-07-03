@@ -1,2 +1,2 @@
 benchmark,LLVM_globalisel,LLVM_selectiondag,VEIR
-fastntt,333,334,520
+fastntt,329,328,523
