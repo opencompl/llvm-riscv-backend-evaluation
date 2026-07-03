@@ -264,18 +264,18 @@ def main():
     
     create_latex_command(plots_dir + "numerical_commands.tex", commands)
     
-    upload_to_zulip(
-        root_dir(),
-        machine_username(),
-        machine_hostname(),
-        machine_uname(),
-        git_hash(),
-        [
-            "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-            "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-        ],
-        [jpg_plot1, jpg_plot2],
-    )
+    # upload_to_zulip(
+    #     root_dir(),
+    #     machine_username(),
+    #     machine_hostname(),
+    #     machine_uname(),
+    #     git_hash(),
+    #     [
+    #         "Synthetic benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
+    #         "Synthetic benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
+    #     ],
+    #     [jpg_plot1, jpg_plot2],
+    # )
 
 
 if __name__ == "__main__":

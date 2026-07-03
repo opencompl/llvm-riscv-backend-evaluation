@@ -250,7 +250,9 @@ def stacked_bar_plot_perc(df, parameter, selector1, selector2, data_dir, plots_d
         print(f"{selector1} vs. {selector2} {parameter}: {instr_num}, Top 5 programs with highest ratio:")
         for _, row in top_5.iterrows():
             print(f"  Benchmark: {row['benchmark']}, Ratio: {row['diff']:.2f}")
-
+            
+    reindexed = group.reindex(columns=class_order, fill_value=0.0)
+    
     # Colors for each class
     class_colors = {
         "<1x": light_blue,
@@ -261,7 +263,7 @@ def stacked_bar_plot_perc(df, parameter, selector1, selector2, data_dir, plots_d
     }
 
     # Stacked plot: one column per value of `init_instr`, with the % of each diff_class stacked on top of each other
-    group.plot(kind="bar", stacked=True, color=[class_colors[c] for c in class_order], figsize=(10, 5))
+    reindexed.plot(kind="bar", stacked=True, color=[class_colors[c] for c in class_order], figsize=(10, 5))
 
     plt.xlabel("#Instructions - LLVM IR")
     plt.xticks(rotation=0)
