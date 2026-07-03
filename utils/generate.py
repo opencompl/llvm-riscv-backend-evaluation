@@ -198,7 +198,11 @@ def LLVM_opt(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Run opt with `O2` on an LLVM file.
     """
-    cmd_base = "opt -O2 -vectorize-slp=0 -vectorize-loops=0 -S "
+    # Force full unrolling of constant-trip loops so functions collapse to a
+    # single basic block. 
+    cmd_base = (
+        "opt -O2 -vectorize-slp=0 -vectorize-loops=0 "
+        "-unroll-threshold=1000000 -unroll-full-max-count=1000 -S ")
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
