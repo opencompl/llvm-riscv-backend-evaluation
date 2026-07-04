@@ -2,10 +2,9 @@
 #
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["xdsl", "utils"]
+# dependencies = ["utils"]
 #
 # [tool.uv.sources]
-# xdsl = { path = "../xdsl" }
 # utils = { path = "../utils" }
 # ///
 
@@ -27,7 +26,6 @@ from utils.generate import (
     LLC_mir_regalloc,
     replace_hyphens_in_variables,
     extract,
-    sanitize,
     rewrite_value_attr_to_immediate,
     rename_numeric_block_labels,
     apply_lowering_to_folder,
@@ -237,13 +235,6 @@ def generate_benchmarks(num, jobs):
         "LLC-MIR-regalloc",
         ".s",
     )
-
-    # rename numeric block labels and sanitize inputs
-    for filename in os.listdir(VEIR_ASM_DIR_PATH):
-        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        rename_numeric_block_labels(input_file)
-        sanitize(input_file)
-        rewrite_value_attr_to_immediate(input_file)
 
     return cleanup_empty_logs(LOGS_DIR_PATH)
 

@@ -2,10 +2,9 @@
 #
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["xdsl", "utils"]
+# dependencies = ["utils"]
 #
 # [tool.uv.sources]
-# xdsl = { path = "../xdsl" }
 # utils = { path = "../utils" }
 # ///
 

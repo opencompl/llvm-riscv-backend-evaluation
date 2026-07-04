@@ -1,6 +1,6 @@
 # Benchmark generation, MCA analysis, and plotting
 
-# Requires mlir-opt, mlir-translate, llc, opt, llvm-mca, veir, xdsl
+# Requires mlir-opt, mlir-translate, llc, opt, llvm-mca, veir
 
 
 .PHONY: all pipeline quick clean
@@ -32,7 +32,6 @@ clean:
 	       synthetic-benchmarks/MLIR_single synthetic-benchmarks/MLIR_bb0_veir synthetic-benchmarks/MLIR_preopt \
 	       synthetic-benchmarks/LLC_ASM_selectiondag synthetic-benchmarks/LLC_ASM_globalisel \
 	       synthetic-benchmarks/VEIR_ASM synthetic-benchmarks/VEIR_MIR synthetic-benchmarks/VEIR_REGALLOC_ASM \
-	       synthetic-benchmarks/XDSL_FUNC synthetic-benchmarks/XDSL_ASM synthetic-benchmarks/logs
 	rm -rf real-benchmarks/LLVMIR real-benchmarks/LLVM_preopt real-benchmarks/MLIR_init \
 	       real-benchmarks/MLIR_bb0_veir real-benchmarks/MLIR_preopt \
 	       real-benchmarks/LLC_ASM_selectiondag real-benchmarks/LLC_ASM_globalisel \

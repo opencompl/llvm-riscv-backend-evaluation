@@ -1,6 +1,5 @@
 llvm-project/*
 veir/*
-xdsl/*
 build/*
 synthetic-benchmarks/LLC_ASM_globalisel
 synthetic-benchmarks/LLC_ASM_selectiondag
@@ -13,8 +12,6 @@ synthetic-benchmarks/MLIR_preopt
 synthetic-benchmarks/LLVM_preopt
 synthetic-benchmarks/MLIR_single
 synthetic-benchmarks/VEIR_ASM
-synthetic-benchmarks/XDSL_FUNC
-synthetic-benchmarks/XDSL_ASM
 synthetic-benchmarks/results
 synthetic-benchmarks/plots
 real-benchmarks/results
