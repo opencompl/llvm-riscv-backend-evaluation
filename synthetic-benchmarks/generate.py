@@ -2,10 +2,9 @@
 #
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["xdsl", "utils"]
+# dependencies = ["utils"]
 #
 # [tool.uv.sources]
-# xdsl = { path = "../xdsl" }
 # utils = { path = "../utils" }
 # ///
 
@@ -27,11 +26,8 @@ from utils.generate import (
     LLC_mir_regalloc,
     replace_hyphens_in_variables,
     extract,
-    sanitize,
     rewrite_value_attr_to_immediate,
     rename_numeric_block_labels,
-    XDSL_create_func,
-    XDSL_regalloc,
     apply_lowering_to_folder,
     extract_basic_block_folder,
     VEIR2MIR,
@@ -69,10 +65,6 @@ LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/LLVM_preopt/"
 
 MLIR_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/MLIR_preopt/"
 
-XDSL_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/XDSL_ASM/"
-
-XDSL_FUNC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/XDSL_FUNC/"
-
 LOGS_DIR_PATH = f"{ROOT_DIR_PATH}/synthetic-benchmarks/logs/"
 
 
@@ -83,11 +75,9 @@ AUTOGEN_DIR_PATHS = [
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
-    XDSL_FUNC_ASM_DIR_PATH,
     VEIR_ASM_DIR_PATH,
     VEIR_MIR_DIR_PATH,
     VEIR_REGALLOC_ASM_DIR_PATH,
-    XDSL_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
     MLIR_OPTIMIZED_DIR_PATH,
@@ -244,43 +234,6 @@ def generate_benchmarks(num, jobs):
         TIMEOUT,
         "LLC-MIR-regalloc",
         ".s",
-    )
-
-    # rename numeric block labels and sanitize inputs
-    for filename in os.listdir(VEIR_ASM_DIR_PATH):
-        input_file = os.path.join(VEIR_ASM_DIR_PATH, filename)
-        rename_numeric_block_labels(input_file)
-        sanitize(input_file)
-        rewrite_value_attr_to_immediate(input_file)
-
-    # XDSL parsing and wrapping in func.func
-    XDSL_create_func_file2ret_opt = dict()
-    apply_lowering_to_folder(
-        VEIR_ASM_DIR_PATH,
-        XDSL_FUNC_ASM_DIR_PATH,
-        LOGS_DIR_PATH,
-        LAKE_file2ret_opt,
-        XDSL_create_func_file2ret_opt,
-        XDSL_create_func,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "XDSL-create-func",
-        ".mlir",
-    )
-
-    # register-allocation with XDSL
-    XDSL_reg_alloc_file2ret_opt = dict()
-    apply_lowering_to_folder(
-        XDSL_FUNC_ASM_DIR_PATH,
-        XDSL_ASM_DIR_PATH,
-        LOGS_DIR_PATH,
-        XDSL_create_func_file2ret_opt,
-        XDSL_reg_alloc_file2ret_opt,
-        XDSL_regalloc,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "XDSL-regalloc",
-        ".mlir",
     )
 
     return cleanup_empty_logs(LOGS_DIR_PATH)

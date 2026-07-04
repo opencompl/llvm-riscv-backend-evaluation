@@ -39,14 +39,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Set up XDSL
-        run: |
-          mkdir build
-          git submodule update --init -- xdsl
-          uv venv build/xdsl-venv --python python3
-          uv pip install --python build/xdsl-venv -e xdsl
-          echo "$GITHUB_WORKSPACE/build/xdsl-venv/bin" >> $GITHUB_PATH
-
       - name: Set up Veir
         run: git submodule update --init -- veir
 

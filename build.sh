@@ -4,11 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LLVM_SRC="$SCRIPT_DIR/llvm-project"
 VEIR_SRC="$SCRIPT_DIR/veir"
-XDSL_SRC="$SCRIPT_DIR/xdsl"
 BUILD_DIR="$SCRIPT_DIR/build"
 LLVM_BUILD="$BUILD_DIR/llvm"
 LLVM_INSTALL="$LLVM_BUILD"
-XDSL_VENV="$BUILD_DIR/xdsl-venv"
 
 info() { echo "[build] $*"; }
 
@@ -23,11 +21,6 @@ cmake -G Ninja \
 
 info "Building LLVM..."
 ninja -C "$LLVM_BUILD"
-
-info "Setting up xDSL virtualenv..."
-uv venv "$XDSL_VENV" --python python3
-uv pip install --python "$XDSL_VENV" -e "$XDSL_SRC"
-
 
 export PATH="$LLVM_INSTALL/bin:$PATH"
 

@@ -8,15 +8,11 @@ dependencies = [
     "numpy",
     "pandas",
     "pdf2image",
-    "xdsl",
     "zulip",
 ]
 
 [tool.uv]
 cache-keys = [{ file = "pyproject.toml" }, { file = "**/*.py" }]
-
-[tool.uv.sources]
-xdsl = { path = "../xdsl" }
 
 [build-system]
 requires = ["setuptools>=64"]

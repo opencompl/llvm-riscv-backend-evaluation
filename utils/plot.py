@@ -75,7 +75,6 @@ parameters_labels = {
 }
 
 selector_labels = {
-    "VEIR_xdsl": "VeIR-xDSL",
     "VEIR_llvm": "VeIR-LLVM",
     "LLVM_globalisel_O1": "GlobalISel (O1)",
     "LLVM_globalisel_O2": "GlobalISel (O2)",
