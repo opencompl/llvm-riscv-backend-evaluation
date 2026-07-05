@@ -75,9 +75,14 @@ AUTOGEN_DIR_PATHS = [
 VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 
 BENCHMARKS = [
-    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "fastntt.c",
-    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "sha256.c",
-    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "fastntt.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "sha256.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_recover.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_branchfree_recover.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_do_raw.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_branchfree_do.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_internal_u64_gen.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_internal_s64_gen.c",
 ]
 
 
