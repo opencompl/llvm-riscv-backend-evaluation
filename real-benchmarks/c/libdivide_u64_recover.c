@@ -61,13 +61,13 @@ struct libdivide_s64_branchfree_t {
 // whether the divisor is negated. In branchfree strategy, it is not negated.
 
 
-__attribute__((always_inline)) uint32_t libdivide_mullhi_u32(uint32_t x, uint32_t y) {
+__attribute__((always_inline)) static uint32_t libdivide_mullhi_u32(uint32_t x, uint32_t y) {
     uint64_t xl = x, yl = y;
     uint64_t rl = xl * yl;
     return (uint32_t)(rl >> 32);
 }
 
-__attribute__((always_inline)) uint64_t libdivide_mullhi_u64(uint64_t x, uint64_t y) {
+__attribute__((always_inline)) static uint64_t libdivide_mullhi_u64(uint64_t x, uint64_t y) {
     // full 128 bits are x0 * y0 + (x0 * y1 << 32) + (x1 * y0 << 32) + (x1 * y1 << 64)
     uint32_t mask = 0xFFFFFFFF;
     uint32_t x0 = (uint32_t)(x & mask);
@@ -85,7 +85,7 @@ __attribute__((always_inline)) uint64_t libdivide_mullhi_u64(uint64_t x, uint64_
     return x1y1 + temp_hi + ((temp_lo + x0y1) >> 32);
 }
 
-__attribute__((always_inline)) int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
+__attribute__((always_inline)) static int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
     // full 128 bits are x0 * y0 + (x0 * y1 << 32) + (x1 * y0 << 32) + (x1 * y1 << 64)
     uint32_t mask = 0xFFFFFFFF;
     uint32_t x0 = (uint32_t)(x & mask);
@@ -99,7 +99,7 @@ __attribute__((always_inline)) int64_t libdivide_mullhi_s64(int64_t x, int64_t y
     return x1 * (int64_t)y1 + (t >> 32) + (w1 >> 32);
 }
 
-__attribute__((always_inline)) int32_t libdivide_count_leading_zeros32(uint32_t val) {
+__attribute__((always_inline)) static int32_t libdivide_count_leading_zeros32(uint32_t val) {
     if (val == 0) return 32;
     int32_t result = 8;
     uint32_t hi = 0xFFU << 24;
@@ -114,7 +114,7 @@ __attribute__((always_inline)) int32_t libdivide_count_leading_zeros32(uint32_t 
     return result;
 }
 
-__attribute__((always_inline)) int32_t libdivide_count_leading_zeros64(uint64_t val) {
+__attribute__((always_inline)) static int32_t libdivide_count_leading_zeros64(uint64_t val) {
     uint32_t hi = val >> 32;
     uint32_t lo = val & 0xFFFFFFFF;
     if (hi != 0) return libdivide_count_leading_zeros32(hi);
@@ -123,7 +123,7 @@ __attribute__((always_inline)) int32_t libdivide_count_leading_zeros64(uint64_t 
 
 // libdivide_128_div_64_to_64: divides a 128-bit uint {numhi, numlo} by a 64-bit uint {den}. The
 // result must fit in 64 bits. Returns the quotient directly and the remainder in *r
-__attribute__((always_inline)) uint64_t libdivide_128_div_64_to_64(
+__attribute__((always_inline)) static uint64_t libdivide_128_div_64_to_64(
     uint64_t numhi, uint64_t numlo, uint64_t den, uint64_t *r) {
     // N.B. resist the temptation to use __uint128_t here.
     // In LLVM compiler-rt, it performs a 128/128 -> 128 division which is many times slower than
@@ -192,7 +192,7 @@ __attribute__((always_inline)) uint64_t libdivide_128_div_64_to_64(
 }
 
 // Bitshift a u128 in place, left (signed_shift > 0) or right (signed_shift < 0)
-__attribute__((always_inline)) void libdivide_u128_shift(
+__attribute__((always_inline)) static void libdivide_u128_shift(
     uint64_t *u1, uint64_t *u0, int32_t signed_shift) {
     if (signed_shift > 0) {
         uint32_t shift = signed_shift;
@@ -208,7 +208,7 @@ __attribute__((always_inline)) void libdivide_u128_shift(
 }
 
 // Computes a 128 / 128 -> 64 bit division, with a 128 bit remainder.
-__attribute__((always_inline)) uint64_t libdivide_128_div_128_to_64(
+__attribute__((always_inline)) static uint64_t libdivide_128_div_128_to_64(
     uint64_t u_hi, uint64_t u_lo, uint64_t v_hi, uint64_t v_lo, uint64_t *r_hi, uint64_t *r_lo) {
     // Adapted from "Unsigned Doubleword Division" in Hacker's Delight
     typedef struct {

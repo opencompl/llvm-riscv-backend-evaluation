@@ -61,13 +61,13 @@ struct libdivide_s64_branchfree_t {
 // whether the divisor is negated. In branchfree strategy, it is not negated.
 
 
-__attribute__((always_inline)) uint32_t libdivide_mullhi_u32(uint32_t x, uint32_t y) {
+__attribute__((always_inline)) static uint32_t libdivide_mullhi_u32(uint32_t x, uint32_t y) {
     uint64_t xl = x, yl = y;
     uint64_t rl = xl * yl;
     return (uint32_t)(rl >> 32);
 }
 
-__attribute__((always_inline)) uint64_t libdivide_mullhi_u64(uint64_t x, uint64_t y) {
+__attribute__((always_inline)) static uint64_t libdivide_mullhi_u64(uint64_t x, uint64_t y) {
     // full 128 bits are x0 * y0 + (x0 * y1 << 32) + (x1 * y0 << 32) + (x1 * y1 << 64)
     uint32_t mask = 0xFFFFFFFF;
     uint32_t x0 = (uint32_t)(x & mask);
@@ -85,7 +85,7 @@ __attribute__((always_inline)) uint64_t libdivide_mullhi_u64(uint64_t x, uint64_
     return x1y1 + temp_hi + ((temp_lo + x0y1) >> 32);
 }
 
-__attribute__((always_inline)) int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
+__attribute__((always_inline)) static int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
     // full 128 bits are x0 * y0 + (x0 * y1 << 32) + (x1 * y0 << 32) + (x1 * y1 << 64)
     uint32_t mask = 0xFFFFFFFF;
     uint32_t x0 = (uint32_t)(x & mask);
