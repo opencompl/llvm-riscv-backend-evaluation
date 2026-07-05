@@ -77,8 +77,8 @@ VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 BENCHMARKS = [
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "fastntt.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "sha256.c",
-    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_recover.c",
-    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_branchfree_recover.c",
+    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_recover.c",
+    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_branchfree_recover.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_do_raw.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_branchfree_do.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_internal_u64_gen.c",
@@ -134,19 +134,19 @@ def generate_benchmarks(jobs):
         ".ll",
     )
     
-    # LLVM opt with unrolling
-    apply_lowering_to_folder(
-        LLVMIR_DIR_PATH,
-        LLVM_OPTIMIZED_DIR_PATH,
-        LOGS_DIR_PATH,
-        MLIR_translate_file2ret,
-        llvmir_file2ret,
-        LLVM_opt_unroll,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "LLVM-opt",
-        "_unrolled.ll",
-    )
+    # # LLVM opt with unrolling
+    # apply_lowering_to_folder(
+    #     LLVMIR_DIR_PATH,
+    #     LLVM_OPTIMIZED_DIR_PATH,
+    #     LOGS_DIR_PATH,
+    #     MLIR_translate_file2ret,
+    #     llvmir_file2ret,
+    #     LLVM_opt_unroll,
+    #     ROOT_DIR_PATH,
+    #     TIMEOUT,
+    #     "LLVM-opt",
+    #     "_unrolled.ll",
+    # )
 
     # LLVM IR to MLIR to extract bb0
     MLIR_preopt_file2ret = dict()
