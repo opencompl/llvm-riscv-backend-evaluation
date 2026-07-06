@@ -269,7 +269,7 @@ def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeo
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
     
-def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeout):
+def LLC_globalisel_no_combines(input_file, output_file, log_file, pass_dict, root_dir, timeout):
     """
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
