@@ -33,13 +33,17 @@ RESULTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "results"
 
 PIPELINES = {
     "LLVM_globalisel": RESULTS_DIR / "LLVM_globalisel",
+    # "LLVM_globalisel_unopt": RESULTS_DIR / "LLVM_globalisel_noopt",
     "LLVM_selectiondag": RESULTS_DIR / "LLVM_selectiondag",
+    # "LLVM_selectiondag_unopt": RESULTS_DIR / "LLVM_selectiondag_noopt",
     "VEIR": RESULTS_DIR / "VEIR",
 }
 
 PIPELINE_LABELS = {
     "LLVM_globalisel": "GlobalISel",
+    "LLVM_globalisel_unopt": "GlobalISel-unopt",
     "LLVM_selectiondag": "SelectionDAG",
+    "LLVM_selectiondag_unopt": "SelectionDAG-unopt",
     "VEIR": "VeIR",
 }
 

@@ -249,6 +249,15 @@ def LLC_selectiondag(input_file, output_file, log_file, pass_dict, root_dir, tim
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
+    
+def LLC_selectiondag_no_combines(input_file, output_file, log_file, pass_dict, root_dir, timeout):
+    """
+    Compile LLVMIR to RISCV assembly with llc.
+    """
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 -combiner-disabled -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond -filetype=asm "
+    cmd = cmd_base + input_file + " -o " + output_file
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
+    pass_dict[output_file] = ret_code
 
 
 def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeout):
@@ -256,6 +265,15 @@ def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeo
     Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
     """
     cmd_base = "llc -march=riscv64 -mcpu=generic-rv64 --global-isel -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond -filetype=asm "
+    cmd = cmd_base + input_file + " -o " + output_file
+    ret_code = run_command(cmd, log_file, timeout, root_dir)
+    pass_dict[output_file] = ret_code
+    
+def LLC_globalisel(input_file, output_file, log_file, pass_dict, root_dir, timeout):
+    """
+    Compile LLVMIR to RISCV assembly with llc using the GlobalISel framework.
+    """
+    cmd_base = "llc -march=riscv64 -mcpu=generic-rv64  -combiner-disabled --global-isel -mattr=+m,+zba,+zbb,+zbs,+zbc,+zbkb,+zicond -filetype=asm "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code

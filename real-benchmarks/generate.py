@@ -22,7 +22,9 @@ from utils.generate import (
     MLIR_to_LLVM,
     LLVM_to_MLIR,
     LLC_selectiondag,
+    LLC_selectiondag_no_combines,
     LLC_globalisel,
+    LLC_globalisel_no_combines,
     VEIR,
     LLC_mir_regalloc,
     strip_target_info,
@@ -46,8 +48,10 @@ MLIR_bb0_VEIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/MLIR_bb0_veir/"
 MLIR_init_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/MLIR_init/"
 
 LLC_ASM_selectiondag_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_selectiondag/"
+LLC_ASM_selectiondag_unopt_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_selectiondag_unopt/"
 
 LLC_ASM_globalisel_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_globalisel/"
+LLC_ASM_globalisel_unopt_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_globalisel_unopt/"
 VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_ASM/"
 VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_MIR/"
 VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_REGALLOC_ASM/"
@@ -63,7 +67,9 @@ AUTOGEN_DIR_PATHS = [
     LLVMIR_DIR_PATH,
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
+    LLC_ASM_selectiondag_unopt_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
+    LLC_ASM_globalisel_unopt_DIR_PATH,
     VEIR_ASM_DIR_PATH,
     VEIR_MIR_DIR_PATH,
     VEIR_REGALLOC_ASM_DIR_PATH,
@@ -77,10 +83,13 @@ VEIR2MIR_BIN = f"{ROOT_DIR_PATH}/veir/.lake/build/bin/veir2mir"
 BENCHMARKS = [
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "fastntt.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "sha256.c",
-    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_recover.c",
-    # ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u64_branchfree_recover.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_recover.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s32_recover.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_do_raw.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s32_do_raw.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_u32_do_raw.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s64_branchfree_do.c",
+    ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_s32_branchfree_do.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_internal_u64_gen.c",
     ROOT_DIR_PATH / "real-benchmarks" / "c" / "libdivide_internal_s64_gen.c",
 ]
@@ -178,6 +187,21 @@ def generate_benchmarks(jobs):
         ".s",
     )
 
+    # selectionDAG - no combines
+    LLC_file2ret = dict()
+    apply_lowering_to_folder(
+        LLVM_OPTIMIZED_DIR_PATH,
+        LLC_ASM_selectiondag_unopt_DIR_PATH,
+        LOGS_DIR_PATH,
+        llvmir_file2ret,
+        LLC_file2ret,
+        LLC_selectiondag_no_combines,
+        ROOT_DIR_PATH,
+        TIMEOUT,
+        "LLC-selectionDAG-noopt",
+        ".s",
+    )
+
     # globalisel
     LLC_file2ret = dict()
     apply_lowering_to_folder(
@@ -190,6 +214,21 @@ def generate_benchmarks(jobs):
         ROOT_DIR_PATH,
         TIMEOUT,
         "LLC-globalISel",
+        ".s",
+    )
+
+    # globalisel no combines
+    LLC_file2ret = dict()
+    apply_lowering_to_folder(
+        LLVM_OPTIMIZED_DIR_PATH,
+        LLC_ASM_globalisel_unopt_DIR_PATH,
+        LOGS_DIR_PATH,
+        llvmir_file2ret,
+        LLC_file2ret,
+        LLC_globalisel_no_combines,
+        ROOT_DIR_PATH,
+        TIMEOUT,
+        "LLC-globalISel-noopt",
         ".s",
     )
 
