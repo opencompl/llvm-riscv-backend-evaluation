@@ -2,7 +2,9 @@ llvm-project/*
 veir/*
 build/*
 synthetic-benchmarks/LLC_ASM_globalisel
+synthetic-benchmarks/LLC_ASM_globalisel_unopt
 synthetic-benchmarks/LLC_ASM_selectiondag
+synthetic-benchmarks/LLC_ASM_selectiondag_unopt
 synthetic-benchmarks/LLVM
 synthetic-benchmarks/LLVMIR
 synthetic-benchmarks/logs
