@@ -33,13 +33,17 @@ RESULTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "results"
 
 PIPELINES = {
     "LLVM_globalisel": RESULTS_DIR / "LLVM_globalisel",
+    # "LLVM_globalisel_unopt": RESULTS_DIR / "LLVM_globalisel_noopt",
     "LLVM_selectiondag": RESULTS_DIR / "LLVM_selectiondag",
+    # "LLVM_selectiondag_unopt": RESULTS_DIR / "LLVM_selectiondag_noopt",
     "VEIR": RESULTS_DIR / "VEIR",
 }
 
 PIPELINE_LABELS = {
     "LLVM_globalisel": "GlobalISel",
+    # "LLVM_globalisel_unopt": "GlobalISel-unopt",
     "LLVM_selectiondag": "SelectionDAG",
+    # "LLVM_selectiondag_unopt": "SelectionDAG-unopt",
     "VEIR": "VeIR",
 }
 
@@ -68,7 +72,7 @@ def latex_table(df, caption, label):
             str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
             for p in PIPELINES.keys()
         ]
-        lines += [rf"        \texttt{{{row['benchmark']}}} & {' & '.join(values)} \\"]
+        lines += [rf"        \texttt{{{row['benchmark'].replace('_', '\_')}}} & {' & '.join(values)} \\"]
 
     lines += [
         r"        \bottomrule",

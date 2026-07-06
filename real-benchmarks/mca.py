@@ -13,6 +13,8 @@ TIMEOUT = 1800  # seconds
 
 LLC_ASM_globalisel_DIR = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_globalisel/"
 LLC_ASM_selectiondag_DIR = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_selectiondag/"
+LLC_ASM_globalisel_DIR_noopt = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_globalisel_unopt/"
+LLC_ASM_selectiondag_DIR_noopt = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_selectiondag_unopt/"
 LLC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/LLC_ASM/"
 VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
 VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
@@ -24,6 +26,12 @@ MCA_LLVM_globalisel_DIR = (
 MCA_LLVM_selectiondag_DIR = (
     f"{ROOT_DIR}/real-benchmarks/results/LLVM_selectiondag/"
 )
+MCA_LLVM_globalisel_DIR_noopt = (
+    f"{ROOT_DIR}/real-benchmarks/results/LLVM_globalisel_noopt/"
+)
+MCA_LLVM_selectiondag_DIR_noopt = (
+    f"{ROOT_DIR}/real-benchmarks/results/LLVM_selectiondag_noopt/"
+)
 LOGS_DIR = f"{ROOT_DIR}/real-benchmarks/results/logs/"
 
 
@@ -31,6 +39,8 @@ AUTOGEN_DIR_PATHS = [
     MCA_VEIR_DIR,
     MCA_LLVM_globalisel_DIR,
     MCA_LLVM_selectiondag_DIR,
+    MCA_LLVM_selectiondag_DIR_noopt,
+    MCA_LLVM_globalisel_DIR_noopt,
     LOGS_DIR,
 ]
 
@@ -47,10 +57,24 @@ def main():
         LLC_ASM_globalisel_DIR, MCA_LLVM_globalisel_DIR, LOGS_DIR, log_index, ROOT_DIR
     )
 
+    log_index = "gisel_noopt_"
+    run_mca_folder(
+        LLC_ASM_globalisel_DIR_noopt, MCA_LLVM_globalisel_DIR_noopt, LOGS_DIR, log_index, ROOT_DIR
+    )
+
     log_index = "sdag_"
     run_mca_folder(
         LLC_ASM_selectiondag_DIR,
         MCA_LLVM_selectiondag_DIR,
+        LOGS_DIR,
+        log_index,
+        ROOT_DIR,
+    )
+
+    log_index = "sdag_noopt_"
+    run_mca_folder(
+        LLC_ASM_selectiondag_DIR_noopt,
+        MCA_LLVM_selectiondag_DIR_noopt,
         LOGS_DIR,
         log_index,
         ROOT_DIR,
