@@ -417,6 +417,94 @@ def proportional_bar_plot(df, parameter, selector1, selector2, data_dir, plots_d
     plt.close()
 
 
+def proportional_bar_plot_geomean(df, parameter, selector1, selector2, selector3, data_dir, plots_dir):
+
+    plt.figure(figsize=(7, 5))
+
+
+    if selector1 not in df.columns or selector2 not in df.columns or selector3 not in df.columns:
+        print(
+            f"Error: One or more columns ({selector1}, {selector2}, {selector3}) do not exist in the dataframe."
+        )
+        return
+
+    df["ratio21"] = df[selector2] / df[selector1]
+    df["ratio31"] = df[selector3] / df[selector1]
+
+    geomean = lambda s: np.exp(np.log(s).mean())
+    grouped = df.groupby("init_instr")
+    average_ratios_by_instruction = pd.DataFrame(
+        {
+            "average_ratio_21": grouped["ratio21"].apply(geomean),
+            "average_ratio_31": grouped["ratio31"].apply(geomean),
+        }
+    ).reset_index()
+
+    # Grouped bars: for each init_instr the two ratios sit side by side,
+    # offset left/right of the tick, instead of overlapping at the same x.
+    x = average_ratios_by_instruction["init_instr"].to_numpy()
+    width = 0.4
+
+    plt.bar(
+        x - width / 2,
+        average_ratios_by_instruction["average_ratio_21"],
+        color=light_green,
+        width=width,
+        label=f"Geomean {parameters_labels[parameter]},$\\frac{{\\text{{{selector_labels[selector2]}}}}}{{\\text{{{selector_labels[selector1]}}}}}$",
+    )
+
+    plt.bar(
+        x + width / 2,
+        average_ratios_by_instruction["average_ratio_31"],
+        color=dark_green,
+        width=width,
+        label=f"Geomean {parameters_labels[parameter]},$\\frac{{\\text{{{selector_labels[selector3]}}}}}{{\\text{{{selector_labels[selector1]}}}}}$",
+    )
+
+    plt.axhline(1, color=black, linestyle="--", linewidth=2)
+
+    plt.xlabel("#Instructions - LLVM IR")
+
+    plt.ylabel(
+        f"$\\frac{{\\text{{{parameters_labels[parameter]},{selector_labels[selector1]}}}}}{{\\text{{{parameters_labels[parameter]}{selector_labels[selector2]}}}}}$",
+        fontsize=26,
+        rotation="horizontal",
+        horizontalalignment="left",
+        y=1.08,
+    )
+
+    max_ratio = average_ratios_by_instruction[
+        ["average_ratio_21", "average_ratio_31"]
+    ].to_numpy().max()
+    plt.yticks(np.arange(0, np.ceil(max_ratio) + 1, 1))
+
+    plt.xticks(np.arange(3, 9, 1))
+
+    plt.legend()
+
+    plt.tight_layout()
+
+    # uncomment to have numbers on top of the bars
+    for bar in plt.gca().patches:
+        height = bar.get_height()*1.03
+        plt.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{height:.2f}",
+            ha="center",
+            va="bottom",
+            color=black,
+        )
+
+
+    pdf_filename = (
+        plots_dir + f"proportional_{parameter}_{selector1}_vs_{selector2}.pdf"
+    )
+    plt.savefig(pdf_filename)
+    plt.close()
+
+
+
 def convert_pdf_to_jpg(pdf_path):
     from pdf2image import convert_from_path
 

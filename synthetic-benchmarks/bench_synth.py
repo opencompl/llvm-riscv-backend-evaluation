@@ -4,22 +4,18 @@ bench_synth.py -- assemble, link, and gem5-simulate the synthetic fuzzed
 kernels (synthetic-benchmarks/<pipeline>/*.s) and save each run's gem5 stats.
 
 Unlike the real benchmarks, these kernels come from fuzzed MLIR rather than C:
-every file exports a single leaf function named `main` that takes 1-4 integer
-arguments in a0.. and returns one integer in a0. The argument count is read
-straight out of the assembly (the `# implicit-def: $x1{0-3}` live-in markers
-the backend emits), and the matching harness -- harnesses/harness_synth_<n>arg.c
--- is compiled and linked against it. One harness per argument count is reused
-for every kernel with that arity.
+every file exports a single leaf function named `main` that takes 0-4 integer
+arguments in a0.. and returns one integer in a0. The argument count is derived
+by a read-before-write scan of the assembly (see benchmark_arity), taking the
+max across pipelines so each benchmark uses one identical harness --
+harnesses/harness_synth_<n>arg.c -- in every pipeline. One harness per argument
+count is reused for every kernel with that arity.
 
-Usage:
-  ./bench_synth.py                                 # all files, VEIR_REGALLOC_ASM
-  ./bench_synth.py --limit 20                      # first 20 files only
-  ./bench_synth.py --files 3_function_0.s 5_function_0.s
-  ./bench_synth.py --pipelines VEIR_REGALLOC_ASM LLC_ASM_globalisel
+This script takes no command-line arguments: edit the Configuration constants
+below and run `./bench_synth.py`.
 """
 
-import argparse
-import os
+import collections
 import re
 import shutil
 import subprocess
@@ -31,6 +27,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 ATTRIBUTE5_RE = re.compile(r"^\s*\.attribute\s*5\s*,")
 GLOBL_RE = re.compile(r"^\s*\.globl\s+([\w.$]+)", re.M)
+# Each harness prints its result checksum; every pipeline of a benchmark uses
+# the same harness with the same inputs, so a correct build must reproduce it.
+CHECKSUM_RE = re.compile(r"CHECKSUM:\s*(0x[0-9a-fA-F]+)")
 MAX_ARITY = 4
 
 # Pipelines whose same-named .s files describe the *same* fuzzed function.
@@ -131,95 +130,58 @@ def report_failure(name, stage, result, failed):
     failed.append(f"{name}: {stage}")
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "results_dir",
-        type=Path,
-        nargs="?",
-        default=SCRIPT_DIR / "results" / "gem5" / "stats",
-        help="where to save raw <name>_<pipeline>.stats.txt "
-        "(default: synthetic-benchmarks/results/gem5/stats/)",
-    )
-    parser.add_argument(
-        "--pipelines",
-        nargs="+",
-        default=REFERENCE_PIPELINES,
-        help="pipeline asm folders under synthetic-benchmarks/ to simulate",
-    )
-    parser.add_argument(
-        "--files",
-        nargs="+",
-        default=None,
-        help="specific .s filenames to run (default: every .s in the pipeline)",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
-        help="only run the first N files (after sorting)",
-    )
-    parser.add_argument(
-        "--gem5-dir",
-        type=Path,
-        # gem5 is a submodule at the repo root, one level up from this script.
-        default=Path(os.environ.get("GEM5_DIR", SCRIPT_DIR.parent / "gem5")),
-    )
-    parser.add_argument(
-        "--harness-dir",
-        type=Path,
-        default=SCRIPT_DIR / "harnesses",
-    )
-    parser.add_argument(
-        "--cpu-type", default=os.environ.get("CPU_TYPE", "TimingSimpleCPU")
-    )
-    parser.add_argument(
-        "--march",
-        # Covers every extension the synthetic kernels use
-        # (rv64i + m/zmmul, zba,zbb,zbc,zbs, zbkb,zbkc, zicond).
-        default=os.environ.get(
-            "MARCH", "rv64gc_zba_zbb_zbc_zbs_zbkb_zbkc_zicond"
-        ),
-    )
-    parser.add_argument("--sysroot", default="/usr/riscv64-linux-gnu")
-    parser.add_argument(
-        "--iters",
-        type=int,
-        default=None,
-        help="override the harness ITERS loop count (default: harness value)",
-    )
-    args = parser.parse_args()
+# ---------------------------------------------------------------------------
+# Configuration -- edit these constants directly; the script takes no CLI args.
+# ---------------------------------------------------------------------------
+# Where to save the raw gem5 stats (collect_gem5.py reads this directory).
+RESULTS_DIR = SCRIPT_DIR / "results" / "gem5" / "stats"
+# Pipeline asm folders under synthetic-benchmarks/ to simulate.
+PIPELINES = REFERENCE_PIPELINES
+# Specific .s filenames to run, or None to run every .s in each pipeline.
+FILES = None
+# Only run the first N files (after sorting), or None for all.
+LIMIT = None
+# gem5 is a submodule at the repo root, one level up from this script.
+GEM5_DIR = SCRIPT_DIR.parent / "gem5"
+HARNESS_DIR = SCRIPT_DIR / "harnesses"
+CPU_TYPE = "TimingSimpleCPU"
+# Covers every extension the synthetic kernels use
+# (rv64i + m/zmmul, zba,zbb,zbc,zbs, zbkb,zbkc, zicond).
+MARCH = "rv64gc_zba_zbb_zbc_zbs_zbkb_zbkc_zicond"
+SYSROOT = "/usr/riscv64-linux-gnu"
+# Override the harness ITERS loop count, or None to use the harness default.
+ITERS = None
 
-    gem5_bin = args.gem5_dir / "build" / "RISCV" / "gem5.opt"
-    se_config = args.gem5_dir / "configs" / "deprecated" / "example" / "se.py"
-    m5_include = args.gem5_dir / "include"
-    m5_lib = args.gem5_dir / "util" / "m5" / "build" / "riscv" / "out"
+
+def main():
+    gem5_bin = GEM5_DIR / "build" / "RISCV" / "gem5.opt"
+    se_config = GEM5_DIR / "configs" / "deprecated" / "example" / "se.py"
+    m5_include = GEM5_DIR / "include"
+    m5_lib = GEM5_DIR / "util" / "m5" / "build" / "riscv" / "out"
 
     if not gem5_bin.is_file():
         sys.exit(f"gem5 binary not found: {gem5_bin} (build gem5 first)")
 
-    args.results_dir.mkdir(parents=True, exist_ok=True)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     work_dir = Path(tempfile.mkdtemp(prefix="synth_bench_"))
     failed = []
     ran = 0
     arity_cache = {}
+    checksums = collections.defaultdict(dict)
 
     try:
-        for pipeline in args.pipelines:
+        for pipeline in PIPELINES:
             pipe_dir = SCRIPT_DIR / pipeline
             if not pipe_dir.is_dir():
                 print(f"! missing pipeline dir {pipe_dir} -- skipping")
                 continue
 
-            if args.files:
-                asm_files = [pipe_dir / f for f in args.files]
+            if FILES:
+                asm_files = [pipe_dir / f for f in FILES]
             else:
                 asm_files = sorted(pipe_dir.glob("*.s"))
-            if args.limit is not None:
-                asm_files = asm_files[: args.limit]
+            if LIMIT is not None:
+                asm_files = asm_files[:LIMIT]
 
             print(f"=== pipeline {pipeline}: {len(asm_files)} files ===")
             for asm_file in asm_files:
@@ -234,7 +196,7 @@ def main():
                 # take the max across pipelines so every pipeline uses the same
                 # harness (see benchmark_arity / REFERENCE_PIPELINES).
                 arity = benchmark_arity(name, arity_cache)
-                harness_src = args.harness_dir / f"harness_synth_{arity}arg.c"
+                harness_src = HARNESS_DIR / f"harness_synth_{arity}arg.c"
                 if not harness_src.is_file():
                     print(f"  ! {name}: no harness for arity {arity}")
                     failed.append(f"{name}: no harness (arity {arity})")
@@ -248,11 +210,11 @@ def main():
                 cc = [
                     "clang",
                     "--target=riscv64-linux-gnu",
-                    f"--sysroot={args.sysroot}",
+                    f"--sysroot={SYSROOT}",
                     f"-I{m5_include}",
                 ]
-                if args.iters is not None:
-                    cc.append(f"-DITERS={args.iters}")
+                if ITERS is not None:
+                    cc.append(f"-DITERS={ITERS}")
                 cc += ["-c", str(harness_src), "-o", str(harness_obj)]
                 res = run(cc)
                 if res.returncode != 0:
@@ -266,7 +228,7 @@ def main():
                 res = run(
                     [
                         "riscv64-linux-gnu-gcc",
-                        f"-march={args.march}",
+                        f"-march={MARCH}",
                         "-c",
                         str(work_asm),
                         "-o",
@@ -283,8 +245,7 @@ def main():
                     [
                         "clang",
                         "--target=riscv64-linux-gnu",
-                        f"--sysroot={args.sysroot}",
-                        "-fuse-ld=lld",
+                        f"--sysroot={SYSROOT}",
                         "-static",
                         str(harness_obj),
                         str(obj_file),
@@ -306,7 +267,7 @@ def main():
                         str(gem5_bin),
                         f"--outdir={gem5_outdir}",
                         str(se_config),
-                        f"--cpu-type={args.cpu_type}",
+                        f"--cpu-type={CPU_TYPE}",
                         "--caches",
                         "-c",
                         str(bin_file),
@@ -316,12 +277,39 @@ def main():
                     report_failure(name, "simulate", res, failed)
                     continue
 
-                stats_dst = args.results_dir / f"{name}_{pipeline}.stats.txt"
+                # Record the harness-reported result checksum, to check that
+                # every pipeline of a benchmark computes the same value.
+                m = CHECKSUM_RE.search(res.stdout or "")
+                if m:
+                    checksums[name][pipeline] = m.group(1)
+
+                stats_dst = RESULTS_DIR / f"{name}_{pipeline}.stats.txt"
                 shutil.copy(gem5_outdir / "stats.txt", stats_dst)
                 ran += 1
                 print(f"  ok  {name} (arity {arity}) -> {stats_dst.name}")
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
+
+    # Cross-pipeline result consistency: every pipeline of a benchmark uses the
+    # same harness and inputs, so a correct build must report the same checksum.
+    print("\n============= Result consistency (checksums) ==============")
+    mism = 0
+    for name in sorted(checksums):
+        sums = checksums[name]
+        unique = set(sums.values())
+        if len(sums) < 2:
+            continue  # nothing to compare against (single pipeline)
+        if len(unique) == 1:
+            continue  # identical across pipelines -- the common case, stay quiet
+        mism += 1
+        print(f"  *** MISMATCH *** {name}")
+        for pipe, s in sorted(sums.items()):
+            print(f"      {pipe:<22} {s}")
+        failed.append(f"{name}: checksum mismatch across pipelines")
+    checked = sum(1 for n in checksums if len(checksums[n]) >= 2)
+    print(f"{checked - mism}/{checked} benchmarks identical across pipelines, "
+          f"{mism} mismatched")
+    print("===========================================================")
 
     print(f"\n==== ran {ran} simulation(s), {len(failed)} failure(s) ====")
     for f in failed:
