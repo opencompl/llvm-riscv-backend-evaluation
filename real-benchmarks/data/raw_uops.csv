@@ -1,0 +1,12 @@
+benchmark,LLVM_globalisel,LLVM_selectiondag,VEIR
+fastntt,90,92,99
+libdivide_internal_s64_gen,164,175,439
+libdivide_internal_u64_gen,157,164,413
+libdivide_s32_branchfree_do,30,26,63
+libdivide_s32_do_raw,38,36,90
+libdivide_s32_recover,37,43,99
+libdivide_s64_branchfree_do,41,37,54
+libdivide_s64_do_raw,47,47,70
+libdivide_s64_recover,67,69,118
+libdivide_u32_do_raw,23,23,47
+sha256,151,153,366
