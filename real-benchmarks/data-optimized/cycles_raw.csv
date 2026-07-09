@@ -1,0 +1,12 @@
+benchmark,VEIR_REGALLOC_ASM,LLC_ASM_globalisel,LLC_ASM_selectiondag
+fastntt,33895652,34027946,33895670
+libdivide_u32_do_raw,378090,377464,377464
+libdivide_s64_branchfree_do,452146,430180,443144
+libdivide_s64_do_raw,575462,549182,551522
+libdivide_s32_do_raw,482238,401122,416586
+libdivide_s32_branchfree_do,396902,333652,333616
+libdivide_s64_recover,308239,231770,242897
+libdivide_s32_recover,225502,146180,163140
+sha256,18047078,10554500,10100066
+libdivide_internal_u64_gen,979062,499866,465438
+libdivide_internal_s64_gen,974886,475528,434963

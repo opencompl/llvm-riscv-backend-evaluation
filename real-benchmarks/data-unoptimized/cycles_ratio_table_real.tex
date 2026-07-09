@@ -1,0 +1,24 @@
+    \centering
+    \footnotesize
+    \begin{tabular}{r l r r r }
+        \toprule
+        & & \multicolumn{3}{c}{\textbf{\#Cycles (ratio vs.\ SelectionDAG)}} \\
+        \cmidrule(lr){3-5}
+        \textbf{\#} & \textbf{Benchmark} & \textbf{Veir} & \textbf{GlobalISel} & \textbf{SelectionDAG} \\
+        \midrule
+        1 & \texttt{libdivide\_s64\_do\_raw} & 600992 (1.1x) & 549182 (1.0x) & 551522 (1.0x) \\
+        2 & \texttt{libdivide\_u32\_do\_raw} & 413864 (1.1x) & 377464 (1.0x) & 377464 (1.0x) \\
+        3 & \texttt{libdivide\_s64\_branchfree\_do} & 498180 (1.1x) & 430180 (1.0x) & 443144 (1.0x) \\
+        4 & \texttt{fastntt} & 45649016 (1.3x) & 34027946 (1.0x) & 33895670 (1.0x) \\
+        5 & \texttt{libdivide\_s32\_do\_raw} & 594988 (1.4x) & 401122 (1.0x) & 416586 (1.0x) \\
+        6 & \texttt{libdivide\_s32\_recover} & 276480 (1.7x) & 146180 (0.9x) & 163140 (1.0x) \\
+        7 & \texttt{libdivide\_s32\_branchfree\_do} & 570206 (1.7x) & 333652 (1.0x) & 333616 (1.0x) \\
+        8 & \texttt{libdivide\_s64\_recover} & 428662 (1.8x) & 231770 (1.0x) & 242897 (1.0x) \\
+        9 & \texttt{libdivide\_internal\_s64\_gen} & 1166942 (2.7x) & 475528 (1.1x) & 434963 (1.0x) \\
+        10 & \texttt{libdivide\_internal\_u64\_gen} & 1260760 (2.7x) & 499866 (1.1x) & 465438 (1.0x) \\
+        11 & \texttt{sha256} & 31216176 (3.1x) & 10554500 (1.0x) & 10100066 (1.0x) \\
+        \midrule
+        & \textbf{geomean} & 1.7x & 1.0x & 1.0x \\
+        \bottomrule
+    \end{tabular}
+    \label{cycles_ratio_table_real}
