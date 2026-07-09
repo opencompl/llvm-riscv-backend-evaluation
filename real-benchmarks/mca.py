@@ -57,10 +57,10 @@ def main():
         LLC_ASM_globalisel_DIR, MCA_LLVM_globalisel_DIR, LOGS_DIR, log_index, ROOT_DIR
     )
 
-    log_index = "gisel_noopt_"
-    run_mca_folder(
-        LLC_ASM_globalisel_DIR_noopt, MCA_LLVM_globalisel_DIR_noopt, LOGS_DIR, log_index, ROOT_DIR
-    )
+    # log_index = "gisel_noopt_"
+    # run_mca_folder(
+    #     LLC_ASM_globalisel_DIR_noopt, MCA_LLVM_globalisel_DIR_noopt, LOGS_DIR, log_index, ROOT_DIR
+    # )
 
     log_index = "sdag_"
     run_mca_folder(
@@ -71,14 +71,14 @@ def main():
         ROOT_DIR,
     )
 
-    log_index = "sdag_noopt_"
-    run_mca_folder(
-        LLC_ASM_selectiondag_DIR_noopt,
-        MCA_LLVM_selectiondag_DIR_noopt,
-        LOGS_DIR,
-        log_index,
-        ROOT_DIR,
-    )
+    # log_index = "sdag_noopt_"
+    # run_mca_folder(
+    #     LLC_ASM_selectiondag_DIR_noopt,
+    #     MCA_LLVM_selectiondag_DIR_noopt,
+    #     LOGS_DIR,
+    #     log_index,
+    #     ROOT_DIR,
+    # )
 
 
 if __name__ == "__main__":
