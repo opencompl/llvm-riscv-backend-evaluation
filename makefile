@@ -37,4 +37,6 @@ clean:
 	       real-benchmarks/LLC_ASM_selectiondag real-benchmarks/LLC_ASM_globalisel \
 	       real-benchmarks/VEIR_ASM real-benchmarks/VEIR_MIR real-benchmarks/VEIR_REGALLOC_ASM \
 	       real-benchmarks/logs real-benchmarks/results real-benchmarks/data
-	rm -rf synthetic-benchmarks/results synthetic-benchmarks/plots synthetic-benchmarks/data synthetic-benchmarks/tables
+	rm -rf synthetic-benchmarks/results synthetic-benchmarks/plots synthetic-benchmarks/data synthetic-benchmarks/tables \
+	       synthetic-benchmarks/interpret_logs synthetic-benchmarks/MLIR_multi_generated \
+	       synthetic-benchmarks/MLIR_candidates

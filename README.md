@@ -83,6 +83,31 @@ Each script also runs standalone via `uv run <path>` and takes its own flags.
 - For each file in `MLIR_multi`, extract `num` single MLIR modules and save them in
   `MLIR_single/`. Each extracted filename contains two numbers consistent throughout the lowering
   (e.g. `size_function_num`, where `size` is the initial program size from `generate_multi.py`).
+- Immediately after extracting each candidate function, run it under `veir-interpret` up to 10
+  times with uniformly-sampled random inputs. Each candidate has its own PRNG stream, seeded from
+  `--seed` (default 0) plus the candidate's size, source, and index — so results are reproducible
+  and independent of test order, and candidates are tested in parallel (`-j` jobs) without
+  affecting which functions survive. Since `veir-interpret` only accepts a zero-argument `main`,
+  each run wraps the function with its arguments replaced by `llvm.mlir.constant` ops. A function
+  is kept if at least 1 of its 10 runs returns a regular numerical result (testing stops at the
+  first numerical result); functions whose runs all produce UB, poison, or errors are discarded.
+  The first `num` passers per size are promoted from the `MLIR_candidates/` staging area into
+  `MLIR_single/`; rejected and surplus candidates stay in `MLIR_candidates/`, and wrappers plus
+  per-candidate run logs land in `interpret_logs/`.
+- If a `MLIR_multi` corpus file runs out before `num` functions survive, `generate.py` generates
+  additional candidates on demand by running `mlir-enumerate` in batches of 500, with a seed
+  derived from `--seed` (so still fully reproducible for a given mlir-fuzz version). Batch files
+  and a `version_log.txt` recording the mlir-fuzz commit and batch seeds land in
+  `MLIR_multi_generated/`. This requires mlir-fuzz built at `~/mlir-fuzz`:
+  ```
+  git clone https://github.com/opencompl/mlir-fuzz ~/mlir-fuzz
+  cd ~/mlir-fuzz && git submodule update --init guided-tree-search
+  cmake -G Ninja -S . -B build -DMLIR_DIR=<this-repo>/build/llvm/lib/cmake/mlir \
+        -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+  ninja -C build mlir-enumerate
+  ```
+  Without it, a run that exhausts the corpus fails with a clear error rather than silently
+  producing fewer benchmarks.
 - Using `mlir-opt`, lift each module's `func.func` and print it in generic syntax, saved into
   `LLVMIR/*.mlir`.
 - Using `mlir-translate`, convert those to textual LLVM IR, saved into `LLVM/*.ll`.

@@ -151,10 +151,10 @@ def run_command(cmd, log_file, timeout, root_dir):
         print(f"{log_file} - timeout of {timeout} seconds reached")
 
 
-def extract_helper(input_file, output_base, max_functions, base_name):
-    f = open(input_file, "r")
-    all_lines = f.readlines()
-    function_count = 0
+def iter_functions(input_file):
+    """Yield each function of a multi-function MLIR file as a list of dedented lines."""
+    with open(input_file, "r") as f:
+        all_lines = f.readlines()
     curr_program = []
     brackets_count = 0
     for line in all_lines:
@@ -166,23 +166,162 @@ def extract_helper(input_file, output_base, max_functions, base_name):
         if "}" in line:
             brackets_count -= 1
         if brackets_count == 1 and len(curr_program) > 0:
-            # write file
-            out_f = open(output_base + f"{base_name}{function_count}.mlir", "w")
-            out_f.writelines(curr_program)
-            out_f.write("\n")
-            out_f.close()
+            yield curr_program
             curr_program = []
+
+
+def write_function(curr_program, out_path):
+    with open(out_path, "w") as out_f:
+        out_f.writelines(curr_program)
+        out_f.write("\n")
+
+
+def extract_helper(
+    input_file, output_base, max_functions, base_name, filter_fn=None, start_index=0
+):
+    function_count = start_index
+    for curr_program in iter_functions(input_file):
+        out_path = output_base + f"{base_name}{function_count}.mlir"
+        write_function(curr_program, out_path)
+        if filter_fn is None or filter_fn(out_path):
             function_count += 1
-            curr_program = []
+        else:
+            # rejected: drop the file and keep scanning so the next
+            # candidate backfills this slot
+            os.remove(out_path)
         if function_count >= max_functions:
             print(f"Reached maximum of {max_functions} functions. Stopping extraction.")
             break
+    return function_count
 
 
-def extract(input_dir, output_base, max_functions):
+def extract_all(input_file, output_base, base_name):
+    """Extract every function into output_base as base_name{i}.mlir; return the paths in order."""
+    paths = []
+    for i, curr_program in enumerate(iter_functions(input_file)):
+        out_path = output_base + f"{base_name}{i}.mlir"
+        write_function(curr_program, out_path)
+        paths.append(out_path)
+    return paths
+
+
+def extract(input_dir, output_base, max_functions, filter_fn=None, start_index=0):
     size = input_dir.split("_")[-1].split(".")[0]
     base_name = f"{size}_function_"
-    extract_helper(input_dir, output_base, max_functions, base_name)
+    return extract_helper(
+        input_dir, output_base, max_functions, base_name, filter_fn, start_index
+    )
+
+
+FUNC_SIGNATURE_RE = re.compile(
+    r"func\.func\s+@\w+\s*\((?P<args>[^)]*)\)(?:\s*->\s*(?P<ret>.+?))?\s*\{"
+)
+ARG_RE = re.compile(r"(%\w+)\s*:\s*i(\d+)")
+
+
+def sample_inputs(arg_widths, rng):
+    """
+    Uniformly sample one value per argument bitwidth, as a signed
+    two's-complement integer (the form llvm.mlir.constant attributes parse).
+    """
+    values = []
+    for width in arg_widths:
+        v = rng.getrandbits(width)
+        if v >= 1 << (width - 1):
+            v -= 1 << width
+        values.append(v)
+    return values
+
+
+def interpret_function(
+    mlir_file, rng, veir_interpret_bin, interpret_logs_dir, root_dir, timeout, n_trials=10
+):
+    """
+    Run a single-function MLIR file under veir-interpret n_trials times with
+    uniformly-sampled random inputs. veir-interpret only accepts a
+    zero-argument `main` entry point, so each trial rewrites the function
+    arguments into llvm.mlir.constant ops in a wrapper file, converted to
+    generic syntax with mlir-opt.
+
+    Returns True (keep) if at least one trial returns a regular numerical
+    result, False (discard) if every trial hits UB, poison, or an error.
+    """
+    name = os.path.splitext(os.path.basename(mlir_file))[0]
+    with open(mlir_file, "r") as f:
+        lines = f.readlines()
+    log = open(os.path.join(interpret_logs_dir, f"{name}.log"), "w")
+    match = FUNC_SIGNATURE_RE.match(lines[0]) if lines else None
+    if match is None:
+        log.write(f"could not parse function signature: {lines[0] if lines else '<empty file>'}\n")
+        log.close()
+        return False
+    args = [(arg_name, int(width)) for arg_name, width in ARG_RE.findall(match.group("args"))]
+    ret_type = match.group("ret")
+
+    numerical = 0
+    trials_run = 0
+    for trial in range(n_trials):
+        trials_run = trial + 1
+        values = sample_inputs([width for _, width in args], rng)
+        log.write(f"trial {trial} inputs: ")
+        log.write(", ".join(f"{n}={v}" for (n, _), v in zip(args, values)) + "\n")
+
+        wrapper_path = os.path.join(interpret_logs_dir, f"{name}_trial{trial}.mlir")
+        with open(wrapper_path, "w") as w:
+            w.write(f"func.func @main() -> {ret_type} {{\n" if ret_type else "func.func @main() {\n")
+            for (arg_name, width), value in zip(args, values):
+                w.write(f"  {arg_name} = llvm.mlir.constant({value} : i{width}) : i{width}\n")
+            w.writelines(lines[1:])
+
+        # convert to generic syntax (also verifies the wrapper)
+        generic_path = os.path.join(interpret_logs_dir, f"{name}_trial{trial}_generic.mlir")
+        log.flush()
+        ret_code = run_command(
+            f"mlir-opt --mlir-print-op-generic {wrapper_path} -o {generic_path}",
+            log,
+            timeout,
+            root_dir,
+        )
+        if ret_code != 0:
+            log.write(f"trial {trial}: mlir-opt failed\n")
+            continue
+
+        # veir only parses the exact flag under the spelling "exact", while
+        # upstream mlir-opt prints "isExact"; rewrite so exact-division
+        # poison is actually observed by the interpreter
+        with open(generic_path, "r") as gf:
+            generic = gf.read()
+        with open(generic_path, "w") as gf:
+            gf.write(re.sub(r"\bisExact\b", "exact", generic))
+
+        try:
+            proc = subprocess.run(
+                [veir_interpret_bin, generic_path],
+                cwd=root_dir,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            log.write(f"trial {trial}: timeout of {timeout} seconds reached\n")
+            continue
+        log.write(proc.stdout)
+        log.write(proc.stderr)
+        ok = (
+            proc.returncode == 0
+            and "Program output:" in proc.stdout
+            and "poison" not in proc.stdout
+        )
+        log.write(f"trial {trial}: {'numerical' if ok else 'non-numerical'}\n")
+        numerical += ok
+        if numerical:
+            # keep is already decided; skip the remaining trials
+            break
+
+    keep = numerical > 0
+    log.write(f"{numerical}/{trials_run} numerical -> {'keep' if keep else 'discard'}\n")
+    log.close()
+    return keep
 
 
 def MLIR_opt(input_file, output_file, log_file, pass_dict, root_dir, timeout):
