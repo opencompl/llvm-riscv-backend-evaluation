@@ -100,7 +100,19 @@ classes = {
     ">2x" : "E",
 }
 
-def main(upload=True):
+def main(upload=True, gem5=False):
+
+    global RESULTS_DIR, PIPELINES, data_dir, plots_dir
+    if gem5:
+        # Reuse this exact pipeline on the gem5 data collected by
+        # bench_synth.py + collect_gem5.py: same pipeline subdir names
+        # (VEIR_llvm / LLVM_globalisel / LLVM_selectiondag), just rooted at
+        # results/gem5/, with separate data/plots dirs so the MCA outputs
+        # above are not overwritten.
+        RESULTS_DIR = ROOT_DIR_PATH / "synthetic-benchmarks" / "results" / "gem5"
+        PIPELINES = {name: RESULTS_DIR / name for name in PIPELINES}
+        data_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/data_gem5/"
+        plots_dir = f"{ROOT_DIR_PATH}/synthetic-benchmarks/plots_gem5/"
 
     setup_plotting_directories(data_dir, plots_dir)
 
@@ -236,6 +248,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Write CSV/TeX/PNG tables locally but do not upload to Zulip.",
     )
+    parser.add_argument(
+        "--gem5",
+        action="store_true",
+        help="Plot the gem5 data in results/gem5/ (into data_gem5/ and "
+        "plots_gem5/) instead of the llvm-mca data.",
+    )
     args = parser.parse_args()
-    main(upload=not args.no_upload)
+    main(upload=not args.no_upload, gem5=args.gem5)
 
