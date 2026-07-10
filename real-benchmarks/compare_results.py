@@ -30,6 +30,8 @@ PIPELINES = [
     "VEIR_OPT_REGALLOC_ASM",
 ]
 
+ITERATION=1024
+
 
 def extract_stat(path: Path, stat_name: str):
     """Value of `stat_name` in the FIRST stats dump of a gem5 stats.txt
@@ -41,7 +43,7 @@ def extract_stat(path: Path, stat_name: str):
             if m:
                 value = m.group(1)
                 try:
-                    return int(value)
+                    return int(value)/ITERATION
                 except ValueError:
                     return float(value)
     return None

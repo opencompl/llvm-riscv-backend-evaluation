@@ -49,23 +49,30 @@ jobs:
           test: false
           lake-package-directory: "veir"
           
-      - name: Install gem5 build dependencies
-        run: sudo apt-get install -y scons python3-dev m4
+      - name: Set up Gem5
+        run: git submodule update --init -- gem5
 
       - name: Get gem5 submodule SHA
         id: gem5-sha
-        run: echo "sha=$(git ls-tree HEAD gem5 --object-only)" >> "$GITHUB_OUTPUT"
+        run: echo "sha=$(git rev-parse HEAD:gem5)" >> "$GITHUB_OUTPUT"
 
-      - name: Cache gem5 build
+      # Cache only the final binary: it is self-contained (embeds its Python
+      # standard library), and the full scons build tree exceeds GitHub's
+      # 10 GB cache quota.
+      - name: Cache gem5 binary
+        id: gem5-cache
         uses: actions/cache@v4
         with:
-          path: gem5/build
+          path: gem5/build/RISCV/gem5.opt
           key: gem5-riscv-${{ steps.gem5-sha.outputs.sha }}
 
+      - name: Install gem5 build dependencies
+        if: steps.gem5-cache.outputs.cache-hit != 'true'
+        run: sudo apt-get install -y scons python3-dev m4
+
       - name: Build Gem5
-        run: |
-          git submodule update --init -- gem5
-          cd gem5 && scons build/RISCV/gem5.opt -j 4
+        if: steps.gem5-cache.outputs.cache-hit != 'true'
+        run: cd gem5 && scons build/RISCV/gem5.opt -j "$(nproc)"
 
       - name: Build Bugs
         uses: leanprover/lean-action@v1
