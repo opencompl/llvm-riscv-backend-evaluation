@@ -49,10 +49,23 @@ jobs:
           test: false
           lake-package-directory: "veir"
           
-      - name: Set up Gem5
-      
-        run: git submodule update --init -- gem5
-        run: cd gem5 && scons build/RISCV/gem5.opt -j 4
+      - name: Install gem5 build dependencies
+        run: sudo apt-get install -y scons python3-dev m4
+
+      - name: Get gem5 submodule SHA
+        id: gem5-sha
+        run: echo "sha=$(git ls-tree HEAD gem5 --object-only)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache gem5 build
+        uses: actions/cache@v4
+        with:
+          path: gem5/build
+          key: gem5-riscv-${{ steps.gem5-sha.outputs.sha }}
+
+      - name: Build Gem5
+        run: |
+          git submodule update --init -- gem5
+          cd gem5 && scons build/RISCV/gem5.opt -j 4
 
       - name: Build Bugs
         uses: leanprover/lean-action@v1
