@@ -64,7 +64,7 @@ main(void)
     }
 
     m5_reset_stats(0, 0);
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1024; i++) {
         bench_kernel(&magics[i], &recovered[i]);
     }
     m5_dump_stats(0, 0);
@@ -72,7 +72,7 @@ main(void)
     /* Correctness check + prevents dead-code elimination: recovered[i]
      * should exactly equal divisors[i] for every measured entry. */
     volatile int32_t mismatches = 0;
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < NUM_DIVISORS; i++) {
         if (recovered[i] != divisors[i]) {
             mismatches++;
         }
@@ -82,7 +82,7 @@ main(void)
     /* FNV-1a checksum of the outputs: bench.py compares this line
      * across pipelines to verify they all computed the same result. */
     uint64_t h = 1469598103934665603ULL;
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < NUM_DIVISORS; i++) {
         h ^= (uint64_t)recovered[i];
         h *= 1099511628211ULL;
     }

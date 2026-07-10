@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 
 # Sibling script in real-benchmarks/: stats parsing shared with the
 # comparison tool.
-from compare_results import extract_stat, split_name
+from compare_results import extract_stat, split_name, ITERATIONS
 
 ROOT_DIR_PATH = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
@@ -62,17 +62,21 @@ CYCLES_STAT = "system.cpu.numCycles"
 
 
 def collect_cycles(results_dir):
-    """Benchmark x pipeline cycles DataFrame from bench.py's gem5 stats
-    (results/<benchmark>_<pipeline>.stats.txt). Cycles come from the FIRST
-    stats dump in each file, i.e. the measured kernel region between
-    m5_reset_stats() and m5_dump_stats(). Columns follow PIPELINES order."""
+    """Benchmark x pipeline per-iteration cycles DataFrame from bench.py's
+    gem5 stats (results/<benchmark>_<pipeline>.stats.txt). Cycles come from
+    the FIRST stats dump in each file, i.e. the measured kernel region
+    between m5_reset_stats() and m5_dump_stats(), divided by the ITERATIONS
+    kernel calls each harness makes there. Columns follow PIPELINES order."""
     table = {}
     for f in sorted(results_dir.glob("*.stats.txt")):
         bench, pipe = split_name(f.name[: -len(".stats.txt")], PIPELINES)
         if pipe is None:
             print(f"warning: {f.name}: unknown pipeline, skipped", file=sys.stderr)
             continue
-        table.setdefault(bench, {})[pipe] = extract_stat(f, CYCLES_STAT)
+        cycles = extract_stat(f, CYCLES_STAT)
+        table.setdefault(bench, {})[pipe] = (
+            None if cycles is None else cycles / ITERATIONS
+        )
 
     df = pd.DataFrame([{"benchmark": b, **table[b]} for b in sorted(table)])
     if df.empty:
