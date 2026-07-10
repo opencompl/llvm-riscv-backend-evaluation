@@ -5,7 +5,7 @@
 #include <gem5/m5ops.h>
 
 #define NUM_DIVISORS 8
-#define NUM_NUMERATORS 256
+#define NUM_NUMERATORS 128
 
 /*
  * Kernel under test: libdivide_s64_do_raw as lowered by the pipeline

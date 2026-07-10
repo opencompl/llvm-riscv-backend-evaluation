@@ -26,54 +26,58 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Sibling script in real-benchmarks/: stats parsing shared with the
+# comparison tool.
+from compare_results import extract_stat, split_name
+
 ROOT_DIR_PATH = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
-# Per-variant cycles_raw.csv inputs, produced by earlier runs of this script
-# against the optimized / unoptimized VeIR results.
-DATA_OPT = ROOT_DIR_PATH / "real-benchmarks" / "data-optimized"
-DATA_UNOPT = ROOT_DIR_PATH / "real-benchmarks" / "data-unoptimized"
+# Per-run gem5 stats produced by bench.py, one file per (benchmark, pipeline).
+RESULTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "results"
 DATA_DIR = ROOT_DIR_PATH / "real-benchmarks" / "data"
 PLOTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "plots"
 
-# Table columns, in order. The two VeIR variants come from DATA_OPT/DATA_UNOPT;
-# GlobalISel and SelectionDAG are identical in both and taken from DATA_OPT.
+# Table columns, in order. Directory naming (see utils/generate.py):
+# VEIR_REGALLOC_ASM comes from the plain VEIR flow, without riscv-combine
+# (unoptimized); VEIR_OPT_REGALLOC_ASM from the VEIR_opt flow, with
+# riscv-combine (optimized).
 PIPELINES = [
-    "VEIR_UNOPT",
-    "VEIR_OPT",
+    "VEIR_REGALLOC_ASM",
+    "VEIR_OPT_REGALLOC_ASM",
     "LLC_ASM_globalisel",
     "LLC_ASM_selectiondag",
 ]
 BASELINE = "LLC_ASM_selectiondag"
 
 PIPELINE_LABELS = {
-    "VEIR_OPT": "Veir (optimized)",
-    "VEIR_UNOPT": "Veir (unoptimized)",
+    "VEIR_OPT_REGALLOC_ASM": "Veir (optimized)",
+    "VEIR_REGALLOC_ASM": "Veir (unoptimized)",
     "LLC_ASM_globalisel": "GlobalISel",
     "LLC_ASM_selectiondag": "SelectionDAG",
 }
 
+CYCLES_STAT = "system.cpu.numCycles"
 
-def collect_cycles(data_opt, data_unopt):
-    """Build the benchmark x pipeline cycles DataFrame by merging the two
-    per-variant cycles_raw.csv files: the VEIR_REGALLOC_ASM column of each
-    becomes VEIR_OPT / VEIR_UNOPT; GlobalISel/SelectionDAG (identical across
-    the two) come from the optimized file. Columns follow PIPELINES order."""
-    for d in (data_opt, data_unopt):
-        if not (d / "cycles_raw.csv").is_file():
-            sys.exit(f"missing {d / 'cycles_raw.csv'}")
 
-    df_opt = pd.read_csv(data_opt / "cycles_raw.csv").rename(
-        columns={"VEIR_REGALLOC_ASM": "VEIR_OPT"}
-    )
-    df_unopt = pd.read_csv(data_unopt / "cycles_raw.csv").rename(
-        columns={"VEIR_REGALLOC_ASM": "VEIR_UNOPT"}
-    )[["benchmark", "VEIR_UNOPT"]]
+def collect_cycles(results_dir):
+    """Benchmark x pipeline cycles DataFrame from bench.py's gem5 stats
+    (results/<benchmark>_<pipeline>.stats.txt). Cycles come from the FIRST
+    stats dump in each file, i.e. the measured kernel region between
+    m5_reset_stats() and m5_dump_stats(). Columns follow PIPELINES order."""
+    table = {}
+    for f in sorted(results_dir.glob("*.stats.txt")):
+        bench, pipe = split_name(f.name[: -len(".stats.txt")], PIPELINES)
+        if pipe is None:
+            print(f"warning: {f.name}: unknown pipeline, skipped", file=sys.stderr)
+            continue
+        table.setdefault(bench, {})[pipe] = extract_stat(f, CYCLES_STAT)
 
-    df = df_opt.merge(df_unopt, on="benchmark", how="outer")
-    cols = ["benchmark"] + [p for p in PIPELINES if p in df.columns]
-    return df[cols]
+    df = pd.DataFrame([{"benchmark": b, **table[b]} for b in sorted(table)])
+    if df.empty:
+        return df
+    return df[["benchmark"] + [p for p in PIPELINES if p in df.columns]]
 
 
 def compute_ratios(df_cycles, pipelines, baseline):
@@ -186,9 +190,10 @@ def render_table_as_png(df_cycles, df_ratios, geomeans, pipelines, title, filepa
 def main(upload=True):
     setup_plotting_directories(DATA_DIR, PLOTS_DIR)
 
-    df_cycles = collect_cycles(DATA_OPT, DATA_UNOPT)
+    df_cycles = collect_cycles(RESULTS_DIR)
+
     if df_cycles.empty:
-        print(f"No benchmarks found in {DATA_OPT} / {DATA_UNOPT}", file=sys.stderr)
+        print(f"No gem5 stats found in {RESULTS_DIR}", file=sys.stderr)
         sys.exit(1)
     if BASELINE not in df_cycles.columns:
         print(f"baseline {BASELINE!r} missing from inputs", file=sys.stderr)
@@ -198,7 +203,7 @@ def main(upload=True):
 
     # Order rows by ascending unoptimized-VeIR ratio (smallest ratio on top).
     # df_cycles and df_ratios share an index, so reorder both to keep aligned.
-    veir = "VEIR_UNOPT"
+    veir = "VEIR_REGALLOC_ASM"
     if veir in df_ratios.columns:
         order = df_ratios.sort_values(veir, kind="stable").index
         df_cycles = df_cycles.loc[order].reset_index(drop=True)

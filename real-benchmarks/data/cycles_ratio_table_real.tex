@@ -6,13 +6,13 @@
         \cmidrule(lr){3-6}
         \textbf{\#} & \textbf{Benchmark} & \textbf{Veir (unoptimized)} & \textbf{Veir (optimized)} & \textbf{GlobalISel} & \textbf{SelectionDAG} \\
         \midrule
-        1 & \texttt{libdivide\_s64\_do\_raw} & 600992 (1.1x) & 575462 (1.0x) & 549182 (1.0x) & 551522 (1.0x) \\
-        2 & \texttt{libdivide\_u32\_do\_raw} & 413864 (1.1x) & 378090 (1.0x) & 377464 (1.0x) & 377464 (1.0x) \\
-        3 & \texttt{libdivide\_s64\_branchfree\_do} & 498180 (1.1x) & 452146 (1.0x) & 430180 (1.0x) & 443144 (1.0x) \\
+        1 & \texttt{libdivide\_s64\_do\_raw} & 300982 (1.1x) & 287714 (1.0x) & 273850 (1.0x) & 276190 (1.0x) \\
+        2 & \texttt{libdivide\_u32\_do\_raw} & 207302 (1.1x) & 189620 (1.0x) & 188580 (1.0x) & 188580 (1.0x) \\
+        3 & \texttt{libdivide\_s64\_branchfree\_do} & 250098 (1.1x) & 226152 (1.0x) & 216358 (1.0x) & 221968 (1.0x) \\
         4 & \texttt{fastntt} & 45649016 (1.3x) & 33895652 (1.0x) & 34027946 (1.0x) & 33895670 (1.0x) \\
-        5 & \texttt{libdivide\_s32\_do\_raw} & 594988 (1.4x) & 482238 (1.2x) & 401122 (1.0x) & 416586 (1.0x) \\
+        5 & \texttt{libdivide\_s32\_do\_raw} & 297824 (1.4x) & 241902 (1.2x) & 200784 (1.0x) & 207802 (1.0x) \\
         6 & \texttt{libdivide\_s32\_recover} & 276480 (1.7x) & 225502 (1.4x) & 146180 (0.9x) & 163140 (1.0x) \\
-        7 & \texttt{libdivide\_s32\_branchfree\_do} & 570206 (1.7x) & 396902 (1.2x) & 333652 (1.0x) & 333616 (1.0x) \\
+        7 & \texttt{libdivide\_s32\_branchfree\_do} & 284876 (1.7x) & 197914 (1.2x) & 166512 (1.0x) & 167250 (1.0x) \\
         8 & \texttt{libdivide\_s64\_recover} & 428662 (1.8x) & 308239 (1.3x) & 231770 (1.0x) & 242897 (1.0x) \\
         9 & \texttt{libdivide\_internal\_s64\_gen} & 1166942 (2.7x) & 974886 (2.2x) & 475528 (1.1x) & 434963 (1.0x) \\
         10 & \texttt{libdivide\_internal\_u64\_gen} & 1260760 (2.7x) & 979062 (2.1x) & 499866 (1.1x) & 465438 (1.0x) \\
