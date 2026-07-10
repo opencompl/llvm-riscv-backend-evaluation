@@ -361,6 +361,41 @@ def VEIR(
             basename, _ = os.path.splitext(filename)
             output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
             log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_lake.log"), "w")
+            cmd_base = f'{VEIROPT_BIN} -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,riscv-combine,dce" '
+            cmd = cmd_base + input_file + " > " + output_file
+            future = executor.submit(run_command, cmd, log_file, TIMEOUT, ROOT_DIR_PATH)
+            futures[future] = output_file
+
+        total = len(futures)
+        for idx, future in enumerate(concurrent.futures.as_completed(futures)):
+            file_path = futures[future]
+            ret_code = future.result()
+            pass_dict[file_path] = ret_code
+            idx += 1
+            percentage = (float(idx) / float(total)) * 100
+            print(f"[veir]: {percentage:.2f}%")
+
+def VEIR_opt(
+    jobs,
+    pass_dict,
+    MLIR_bb0_VEIR_DIR_PATH,
+    VEIR_ASM_DIR_PATH,
+    LOGS_DIR_PATH,
+    ROOT_DIR_PATH,
+    VEIROPT_BIN,
+    TIMEOUT,
+):
+    """
+    Lower the input file to RISCV with VeIR, using multiple threads.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
+        futures = {}
+
+        for filename in os.listdir(MLIR_bb0_VEIR_DIR_PATH):
+            input_file = os.path.join(MLIR_bb0_VEIR_DIR_PATH, filename)
+            basename, _ = os.path.splitext(filename)
+            output_file = os.path.join(VEIR_ASM_DIR_PATH, basename + ".mlir")
+            log_file = open(os.path.join(LOGS_DIR_PATH, basename + "_lake.log"), "w")
             cmd_base = f'{VEIROPT_BIN} -p="isel-sdag-riscv64,isel-br-riscv64,isel-riscv64,reconcile-cast,dce" '
             cmd = cmd_base + input_file + " > " + output_file
             future = executor.submit(run_command, cmd, log_file, TIMEOUT, ROOT_DIR_PATH)
