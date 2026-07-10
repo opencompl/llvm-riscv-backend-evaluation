@@ -17,8 +17,9 @@ LLC_ASM_globalisel_DIR_noopt = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_globalisel_u
 LLC_ASM_selectiondag_DIR_noopt = f"{ROOT_DIR}/real-benchmarks/LLC_ASM_selectiondag_unopt/"
 LLC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/LLC_ASM/"
 VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
-VEIR_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_REGALLOC_ASM/"
+VEIR_OPT_REGALLOC_ASM_DIR = f"{ROOT_DIR}/real-benchmarks/VEIR_OPT_REGALLOC_ASM/"
 MCA_VEIR_DIR = f"{ROOT_DIR}/real-benchmarks/results/VEIR/"
+MCA_VEIR_OPT_DIR = f"{ROOT_DIR}/real-benchmarks/results/VEIR_OPT/"
 
 MCA_LLVM_globalisel_DIR = (
     f"{ROOT_DIR}/real-benchmarks/results/LLVM_globalisel/"
@@ -37,6 +38,7 @@ LOGS_DIR = f"{ROOT_DIR}/real-benchmarks/results/logs/"
 
 AUTOGEN_DIR_PATHS = [
     MCA_VEIR_DIR,
+    MCA_VEIR_OPT_DIR,
     MCA_LLVM_globalisel_DIR,
     MCA_LLVM_selectiondag_DIR,
     MCA_LLVM_selectiondag_DIR_noopt,
@@ -51,6 +53,11 @@ def main():
 
     log_index = "veir_"
     run_mca_folder(VEIR_REGALLOC_ASM_DIR, MCA_VEIR_DIR, LOGS_DIR, log_index, ROOT_DIR)
+
+    log_index = "veir_opt_"
+    run_mca_folder(
+        VEIR_OPT_REGALLOC_ASM_DIR, MCA_VEIR_OPT_DIR, LOGS_DIR, log_index, ROOT_DIR
+    )
 
     log_index = "gisel_"
     run_mca_folder(

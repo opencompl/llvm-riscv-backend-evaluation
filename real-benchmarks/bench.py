@@ -90,6 +90,7 @@ PIPELINES = [
     "LLC_ASM_globalisel",
     "LLC_ASM_selectiondag",
     "VEIR_REGALLOC_ASM",
+    "VEIR_OPT_REGALLOC_ASM",
 ]
 
 # Harness filename (relative to --harness-dir), when it does not follow
