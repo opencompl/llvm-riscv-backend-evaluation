@@ -5,30 +5,27 @@
 #include <gem5/m5ops.h>
 
 #define NUM_DIVISORS 8
-#define NUM_NUMERATORS 256
+#define NUM_NUMERATORS 128
 
 /*
- * Kernel under test: libdivide_s32_branchfree_do as lowered by the
- * pipeline under evaluation. bench.py renames the asm entry symbol to
+ * Kernel under test: libdivide_u32_do_raw as lowered by the pipeline
+ * under evaluation. bench.py renames the asm entry symbol to
  * 'bench_kernel', so it cannot collide with libdivide.h's static-inline
  * reference implementation (which has a different signature anyway).
  */
-extern void bench_kernel(int32_t numer,
-                         const struct libdivide_s32_branchfree_t *denom,
-                         int32_t *out);
+extern void bench_kernel(uint32_t numer, uint32_t magic, uint8_t more,
+                         uint32_t *out);
 
 /*
- * NOTE: libdivide's branchfree path does not support divisors of 1 or -1
- * (the magic-number scheme it uses is undefined for those). Keep 1/-1
- * out of this set -- everything else (powers of two and arbitrary odd
- * values, both signs) is fine.
+ * A mix of divisors chosen to exercise both code paths in do_raw:
+ * powers of two hit the shift path (magic == 0); everything else hits
+ * the mult path (with and without LIBDIVIDE_ADD_MARKER).
  */
-static const int32_t divisors[NUM_DIVISORS] = {2, -2, 64,      -128,
-                                               3, -7, 1000003, -999983};
-
-static struct libdivide_s32_branchfree_t magics[NUM_DIVISORS];
-static int32_t numerators[NUM_NUMERATORS];
-static int32_t results[NUM_DIVISORS][NUM_NUMERATORS];
+static const uint32_t divisors[NUM_DIVISORS] = {1, 2,       64,     128,
+                                                3, 1000003, 999983, 4294967291u};
+static struct libdivide_u32_t magics[NUM_DIVISORS];
+static uint32_t numerators[NUM_NUMERATORS];
+static uint32_t results[NUM_DIVISORS][NUM_NUMERATORS];
 
 static void
 init_numerators(void)
@@ -37,15 +34,14 @@ init_numerators(void)
     uint64_t x = 12345;
     for (int i = 0; i < NUM_NUMERATORS; i++) {
         x = x * 6364136223846793005ULL + 1442695040888963407ULL;
-        numerators[i] = (int32_t)x;
+        numerators[i] = (uint32_t)x;
     }
 
-    /* A few deliberate edge cases (0 and INT32_MAX are safe with
-     * branchfree; just avoid divisors of +-1, handled above). */
+    /* A few deliberate edge cases. */
     numerators[0] = 0;
     numerators[1] = 1;
-    numerators[2] = -1;
-    numerators[3] = INT32_MAX;
+    numerators[2] = UINT32_MAX;
+    numerators[3] = UINT32_MAX - 1;
 }
 
 int
@@ -53,27 +49,28 @@ main(void)
 {
     init_numerators();
 
-    /* Setup: generate the branchfree magic/shift pair for each divisor
-     * using the reference header implementation. Not measured -- gen()
-     * runs once per divisor, the divide itself is the hot path. */
+    /* Setup: generate the real magic/shift pair for each divisor using
+     * the reference header implementation. Not measured -- do_raw is
+     * the hot path in real use, gen() runs once per divisor up front. */
     for (int d = 0; d < NUM_DIVISORS; d++) {
-        magics[d] = libdivide_s32_branchfree_gen(divisors[d]);
+        magics[d] = libdivide_u32_gen(divisors[d]);
     }
 
     m5_reset_stats(0, 0);
     for (int d = 0; d < NUM_DIVISORS; d++) {
         for (int i = 0; i < NUM_NUMERATORS; i++) {
-            bench_kernel(numerators[i], &magics[d], &results[d][i]);
+            bench_kernel(numerators[i], magics[d].magic, magics[d].more,
+                         &results[d][i]);
         }
     }
     m5_dump_stats(0, 0);
 
     /* Correctness check against native division; also prevents the
      * results array from being optimized away. */
-    volatile int32_t mismatches = 0;
+    volatile uint32_t mismatches = 0;
     for (int d = 0; d < NUM_DIVISORS; d++) {
         for (int i = 0; i < NUM_NUMERATORS; i++) {
-            int32_t expected = numerators[i] / divisors[d];
+            uint32_t expected = numerators[i] / divisors[d];
             if (results[d][i] != expected) {
                 mismatches++;
             }

@@ -26,6 +26,7 @@ from utils.generate import (
     LLC_globalisel,
     LLC_globalisel_no_combines,
     VEIR,
+    VEIR_opt,
     LLC_mir_regalloc,
     strip_target_info,
     vcc_emit_mlir,
@@ -55,6 +56,9 @@ LLC_ASM_globalisel_unopt_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLC_ASM_gl
 VEIR_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_ASM/"
 VEIR_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_MIR/"
 VEIR_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_REGALLOC_ASM/"
+VEIR_OPT_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_OPT_ASM/"
+VEIR_OPT_MIR_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_OPT_MIR/"
+VEIR_OPT_REGALLOC_ASM_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/VEIR_OPT_REGALLOC_ASM/"
 
 LLVM_OPTIMIZED_DIR_PATH = f"{ROOT_DIR_PATH}/real-benchmarks/LLVM_preopt/"
 
@@ -67,12 +71,15 @@ AUTOGEN_DIR_PATHS = [
     LLVMIR_DIR_PATH,
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
-    LLC_ASM_selectiondag_unopt_DIR_PATH,
+    # LLC_ASM_selectiondag_unopt_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
-    LLC_ASM_globalisel_unopt_DIR_PATH,
+    # LLC_ASM_globalisel_unopt_DIR_PATH,
     VEIR_ASM_DIR_PATH,
     VEIR_MIR_DIR_PATH,
     VEIR_REGALLOC_ASM_DIR_PATH,
+    VEIR_OPT_ASM_DIR_PATH,
+    VEIR_OPT_MIR_DIR_PATH,
+    VEIR_OPT_REGALLOC_ASM_DIR_PATH,
     LOGS_DIR_PATH,
     LLVM_OPTIMIZED_DIR_PATH,
     MLIR_OPTIMIZED_DIR_PATH,
@@ -188,19 +195,19 @@ def generate_benchmarks(jobs):
     )
 
     # selectionDAG - no combines
-    LLC_file2ret = dict()
-    apply_lowering_to_folder(
-        LLVM_OPTIMIZED_DIR_PATH,
-        LLC_ASM_selectiondag_unopt_DIR_PATH,
-        LOGS_DIR_PATH,
-        llvmir_file2ret,
-        LLC_file2ret,
-        LLC_selectiondag_no_combines,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "LLC-selectionDAG-noopt",
-        ".s",
-    )
+    # LLC_file2ret = dict()
+    # apply_lowering_to_folder(
+    #     LLVM_OPTIMIZED_DIR_PATH,
+    #     LLC_ASM_selectiondag_unopt_DIR_PATH,
+    #     LOGS_DIR_PATH,
+    #     llvmir_file2ret,
+    #     LLC_file2ret,
+    #     LLC_selectiondag_no_combines,
+    #     ROOT_DIR_PATH,
+    #     TIMEOUT,
+    #     "LLC-selectionDAG-noopt",
+    #     ".s",
+    # )
 
     # globalisel
     LLC_file2ret = dict()
@@ -217,20 +224,20 @@ def generate_benchmarks(jobs):
         ".s",
     )
 
-    # globalisel no combines
-    LLC_file2ret = dict()
-    apply_lowering_to_folder(
-        LLVM_OPTIMIZED_DIR_PATH,
-        LLC_ASM_globalisel_unopt_DIR_PATH,
-        LOGS_DIR_PATH,
-        llvmir_file2ret,
-        LLC_file2ret,
-        LLC_globalisel_no_combines,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "LLC-globalISel-noopt",
-        ".s",
-    )
+    # # globalisel no combines
+    # LLC_file2ret = dict()
+    # apply_lowering_to_folder(
+    #     LLVM_OPTIMIZED_DIR_PATH,
+    #     LLC_ASM_globalisel_unopt_DIR_PATH,
+    #     LOGS_DIR_PATH,
+    #     llvmir_file2ret,
+    #     LLC_file2ret,
+    #     LLC_globalisel_no_combines,
+    #     ROOT_DIR_PATH,
+    #     TIMEOUT,
+    #     "LLC-globalISel-noopt",
+    #     ".s",
+    # )
 
     # extract basic block
     extract_basic_block_folder(
@@ -277,6 +284,48 @@ def generate_benchmarks(jobs):
         ROOT_DIR_PATH,
         TIMEOUT,
         "LLC-MIR-regalloc",
+        ".s",
+    )
+
+    # veir-opt with riscv-combine, same downstream steps as the veir flow
+    LAKE_opt_nocombine_file2ret = dict()
+    VEIR_opt(
+        jobs,
+        LAKE_opt_nocombine_file2ret,
+        MLIR_bb0_VEIR_DIR_PATH,
+        VEIR_OPT_ASM_DIR_PATH,
+        LOGS_DIR_PATH,
+        ROOT_DIR_PATH,
+        VEIROPT_BIN,
+        TIMEOUT,
+    )
+
+    # veir2mir
+    veir_opt_2mir_file2ret = dict()
+    VEIR2MIR(
+        VEIR_OPT_ASM_DIR_PATH,
+        VEIR_OPT_MIR_DIR_PATH,
+        LOGS_DIR_PATH,
+        LAKE_opt_nocombine_file2ret,
+        veir_opt_2mir_file2ret,
+        VEIR2MIR_BIN,
+        ROOT_DIR_PATH,
+        TIMEOUT,
+        log_suffix="_veir2mir_opt.log",
+    )
+
+    # llc regalloc
+    veir_opt_regalloc_file2ret = dict()
+    apply_lowering_to_folder(
+        VEIR_OPT_MIR_DIR_PATH,
+        VEIR_OPT_REGALLOC_ASM_DIR_PATH,
+        LOGS_DIR_PATH,
+        veir_opt_2mir_file2ret,
+        veir_opt_regalloc_file2ret,
+        LLC_mir_regalloc,
+        ROOT_DIR_PATH,
+        TIMEOUT,
+        "LLC-MIR-regalloc-veiropt",
         ".s",
     )
 

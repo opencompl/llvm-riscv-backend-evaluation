@@ -7,6 +7,7 @@ import shutil
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter, NullFormatter, LogLocator
 import numpy as np
 import math
 import logging
@@ -415,6 +416,108 @@ def proportional_bar_plot(df, parameter, selector1, selector2, data_dir, plots_d
     )
     plt.savefig(pdf_filename)
     plt.close()
+
+
+def proportional_bar_plot_geomean(df, parameter, selector1, selector2, selector3, data_dir, plots_dir):
+
+    plt.figure(figsize=(15, 5))
+
+
+    if selector1 not in df.columns or selector2 not in df.columns or selector3 not in df.columns:
+        print(
+            f"Error: One or more columns ({selector1}, {selector2}, {selector3}) do not exist in the dataframe."
+        )
+        return
+    
+    df['ratio_21'] = df[selector2]/df[selector1]
+    df['ratio_31'] = df[selector3]/df[selector1]
+    df['ratio_11'] = df[selector1]/df[selector1]
+    
+    average_grouped_21 = (
+        df.groupby("init_instr")["ratio_21"]
+        .apply(lambda x: np.exp(np.log(x).mean()))
+        .reset_index(name="average_ratio_21")
+    )
+    
+    average_grouped_31 = (
+        df.groupby("init_instr")["ratio_31"]
+        .apply(lambda x: np.exp(np.log(x).mean()))
+        .reset_index(name="average_ratio_31")
+    )
+    
+    average_grouped_11 = (
+        df.groupby("init_instr")["ratio_11"]
+        .apply(lambda x: np.exp(np.log(x).mean()))
+        .reset_index(name="average_ratio_11")
+    )
+    
+    
+
+    # Grouped horizontal bars: for each init_instr, three bars (one per
+    # selector) whose length is the geomean, over that size bucket, of the
+    # selector's ratio to selector1. selector1's own bar is 1.0 (baseline).
+    # The bar thickness (bar_h) is a bit less than the centre spacing (step),
+    # so bars within a group never overlap and groups stay separated.
+    init = average_grouped_11["init_instr"].to_numpy()
+    bar_h = 0.22
+    step = 0.25
+
+    plt.barh(
+        init - step,
+        average_grouped_11["average_ratio_11"],
+        color=light_blue,
+        height=bar_h,
+        label=selector_labels[selector1],
+    )
+
+    plt.barh(
+        init,
+        average_grouped_21["average_ratio_21"],
+        color=dark_green,
+        height=bar_h,
+        label=selector_labels[selector2],
+    )
+
+    plt.barh(
+        init + step,
+        average_grouped_31["average_ratio_31"],
+        color=light_green,
+        height=bar_h,
+        label=selector_labels[selector3],
+    )
+
+    # baseline at ratio = 1
+    plt.axvline(1, color=black, linestyle="--", linewidth=1)
+
+    plt.ylabel("#Instructions - LLVM IR")
+    plt.yticks(init)
+    plt.xlabel(
+        f"Geomean {parameters_labels[parameter]} ratio (vs {selector_labels[selector1]})"
+    )
+
+    plt.legend()
+
+    plt.tight_layout()
+
+    # numbers at the end of each (horizontal) bar
+    for bar in plt.gca().patches:
+        value = bar.get_width()
+        plt.text(
+            value * 1.03,
+            bar.get_y() + bar.get_height() / 2.0,
+            f"{value:.2f}",
+            ha="left",
+            va="center",
+            color=black,
+        )
+
+
+    pdf_filename = (
+        plots_dir + f"proportional_all.pdf"
+    )
+    plt.savefig(pdf_filename)
+    plt.close()
+
 
 
 def convert_pdf_to_jpg(pdf_path):

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
+import math
 import subprocess
 import sys
 from pathlib import Path
+
 import pandas as pd
+
 from utils.plot import (
     upload_to_zulip,
-    collect_data,
     setup_plotting_directories,
     light_blue,
 )
-
 from utils.lib import (
     root_dir,
     machine_username,
@@ -25,82 +26,148 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Sibling script in real-benchmarks/: stats parsing shared with the
+# comparison tool.
+from compare_results import extract_stat, split_name, ITERATIONS
+
 ROOT_DIR_PATH = Path(
     subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()
 )
 
+# Per-run gem5 stats produced by bench.py, one file per (benchmark, pipeline).
 RESULTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "results"
+DATA_DIR = ROOT_DIR_PATH / "real-benchmarks" / "data"
+PLOTS_DIR = ROOT_DIR_PATH / "real-benchmarks" / "plots"
 
-PIPELINES = {
-    "LLVM_globalisel": RESULTS_DIR / "LLVM_globalisel",
-    # "LLVM_globalisel_unopt": RESULTS_DIR / "LLVM_globalisel_noopt",
-    "LLVM_selectiondag": RESULTS_DIR / "LLVM_selectiondag",
-    # "LLVM_selectiondag_unopt": RESULTS_DIR / "LLVM_selectiondag_noopt",
-    "VEIR": RESULTS_DIR / "VEIR",
-}
+# Table columns, in order. Directory naming (see utils/generate.py):
+# VEIR_REGALLOC_ASM comes from the plain VEIR flow, without riscv-combine
+# (unoptimized); VEIR_OPT_REGALLOC_ASM from the VEIR_opt flow, with
+# riscv-combine (optimized).
+PIPELINES = [
+    "VEIR_REGALLOC_ASM",
+    "VEIR_OPT_REGALLOC_ASM",
+    "LLC_ASM_globalisel",
+    "LLC_ASM_selectiondag",
+]
+BASELINE = "LLC_ASM_selectiondag"
 
 PIPELINE_LABELS = {
-    "LLVM_globalisel": "GlobalISel",
-    # "LLVM_globalisel_unopt": "GlobalISel-unopt",
-    "LLVM_selectiondag": "SelectionDAG",
-    # "LLVM_selectiondag_unopt": "SelectionDAG-unopt",
-    "VEIR": "VeIR",
+    "VEIR_OPT_REGALLOC_ASM": "Veir (optimized)",
+    "VEIR_REGALLOC_ASM": "Veir (unoptimized)",
+    "LLC_ASM_globalisel": "GlobalISel",
+    "LLC_ASM_selectiondag": "SelectionDAG",
 }
 
-ITERATIONS = 100
+CYCLES_STAT = "system.cpu.numCycles"
 
 
-def latex_table(df, caption, label):
-    """
-    Emit a LaTeX figure+tabular block.  metric_index: 0=instructions, 1=cycles, 2=uops.
-    """
-    col_headers = " & ".join(
-        rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in PIPELINES.keys()
-    )
+def collect_cycles(results_dir):
+    """Benchmark x pipeline per-iteration cycles DataFrame from bench.py's
+    gem5 stats (results/<benchmark>_<pipeline>.stats.txt). Cycles come from
+    the FIRST stats dump in each file, i.e. the measured kernel region
+    between m5_reset_stats() and m5_dump_stats(), divided by the ITERATIONS
+    kernel calls each harness makes there. Columns follow PIPELINES order."""
+    table = {}
+    for f in sorted(results_dir.glob("*.stats.txt")):
+        bench, pipe = split_name(f.name[: -len(".stats.txt")], PIPELINES)
+        if pipe is None:
+            print(f"warning: {f.name}: unknown pipeline, skipped", file=sys.stderr)
+            continue
+        cycles = extract_stat(f, CYCLES_STAT)
+        table.setdefault(bench, {})[pipe] = (
+            None if cycles is None else cycles / ITERATIONS
+        )
 
+    df = pd.DataFrame([{"benchmark": b, **table[b]} for b in sorted(table)])
+    if df.empty:
+        return df
+    return df[["benchmark"] + [p for p in PIPELINES if p in df.columns]]
+
+
+def compute_ratios(df_cycles, pipelines, baseline):
+    """Per-benchmark ratio pipeline/baseline plus the geometric mean of those
+    ratios per pipeline. Returns (df_ratios, geomeans)."""
+    pipes = [p for p in pipelines if p in df_cycles.columns]
+    ratios = {"benchmark": df_cycles["benchmark"]}
+    for p in pipes:
+        ratios[p] = df_cycles[p] / df_cycles[baseline]
+    df_ratios = pd.DataFrame(ratios)
+
+    geomeans = {}
+    for p in pipes:
+        vals = [r for r in df_ratios[p] if pd.notna(r) and r > 0]
+        geomeans[p] = (
+            math.exp(sum(math.log(r) for r in vals) / len(vals)) if vals else float("nan")
+        )
+    return df_ratios, geomeans
+
+
+def _fmt_ratio(r):
+    """One significant decimal digit, e.g. 0.9x / 1.1x."""
+    return "n/a" if pd.isna(r) else f"{r:.1f}x"
+
+
+def _cycle_cell(cycles, ratio):
+    if pd.isna(cycles):
+        return "FAIL"
+    return f"{int(cycles)} ({_fmt_ratio(ratio)})"
+
+
+def latex_table(df_cycles, df_ratios, geomeans, pipelines, label):
+    """Booktabs table: one column per pipeline showing `<cycles> (<ratio>x)`,
+    with a trailing geomean row (ratios only)."""
+    pipes = [p for p in pipelines if p in df_cycles.columns]
+    col_headers = " & ".join(rf"\textbf{{{PIPELINE_LABELS[p]}}}" for p in pipes)
+    ratio_by_bench = df_ratios.set_index("benchmark")
+
+    n = len(pipes)
+    # Leading serial-number column, then benchmark, then one column per pipeline.
     lines = [
         r"    \centering",
         r"    \footnotesize",
-        rf"    \begin{{tabular}}{{l {'r ' * len(PIPELINES)}}}",
+        rf"    \begin{{tabular}}{{r l {'r ' * n}}}",
         r"        \toprule",
-        rf"        \textbf{{Benchmark}} & {col_headers} \\",
+        rf"        & & \multicolumn{{{n}}}{{c}}{{\textbf{{\#Cycles (ratio vs.\ SelectionDAG)}}}} \\",
+        rf"        \cmidrule(lr){{3-{n + 2}}}",
+        rf"        \textbf{{\#}} & \textbf{{Benchmark}} & {col_headers} \\",
         r"        \midrule",
     ]
 
-    for _, row in df.iterrows():
-        values = [
-            str(row[p]) if p in row and pd.notna(row[p]) else "FAIL"
-            for p in PIPELINES.keys()
+    for i, (_, row) in enumerate(df_cycles.iterrows(), start=1):
+        bench = row["benchmark"]
+        cells = [
+            _cycle_cell(row[p], ratio_by_bench.loc[bench, p]) for p in pipes
         ]
-        lines += [rf"        \texttt{{{row['benchmark'].replace('_', '\_')}}} & {' & '.join(values)} \\"]
+        name = bench.replace("_", r"\_")
+        lines.append(rf"        {i} & \texttt{{{name}}} & {' & '.join(cells)} \\")
 
+    geo_cells = [_fmt_ratio(geomeans.get(p)) for p in pipes]
     lines += [
+        r"        \midrule",
+        rf"        & \textbf{{geomean}} & {' & '.join(geo_cells)} \\",
         r"        \bottomrule",
         r"    \end{tabular}",
-        rf"    \caption{{{caption}}}",
         rf"    \label{{{label}}}",
     ]
-
     return "\n".join(lines)
 
 
-def render_table_as_png(df, title, filepath):
-    """Render the table data as a PNG image using matplotlib."""
-
+def render_table_as_png(df_cycles, df_ratios, geomeans, pipelines, title, filepath):
+    """Render the same `<cycles> (<ratio>x)` table (with geomean row) as a PNG."""
     plt.rcParams["font.family"] = ["Ubuntu", "Nimbus Sans", "sans-serif"]
 
+    pipes = [p for p in pipelines if p in df_cycles.columns]
+    col_headers = ["#", "Benchmark"] + [PIPELINE_LABELS[p] for p in pipes]
+    ratio_by_bench = df_ratios.set_index("benchmark")
+
     table_rows = []
+    for i, (_, row) in enumerate(df_cycles.iterrows(), start=1):
+        bench = row["benchmark"]
+        cells = [_cycle_cell(row[p], ratio_by_bench.loc[bench, p]) for p in pipes]
+        table_rows.append([str(i), bench] + cells)
+    table_rows.append(["", "geomean"] + [_fmt_ratio(geomeans.get(p)) for p in pipes])
 
-    col_headers = ["Benchmark"] + [PIPELINE_LABELS[p] for p in PIPELINES.keys()]
-
-    for _, row in df.iterrows():
-        values = [
-            str(int(row[p])) if p in row and pd.notna(row[p]) else "FAIL"
-            for p in PIPELINES.keys()
-        ]
-        table_rows.append([row["benchmark"]] + values)
-
-    fig, ax = plt.subplots(figsize=(8, max(1.5, len(table_rows) * 0.6 + 1.2)))
+    fig, ax = plt.subplots(figsize=(10, max(1.5, len(table_rows) * 0.6 + 1.2)))
     ax.axis("off")
 
     tbl = ax.table(
@@ -125,66 +192,55 @@ def render_table_as_png(df, title, filepath):
 
 
 def main(upload=True):
+    setup_plotting_directories(DATA_DIR, PLOTS_DIR)
 
-    setup_plotting_directories(
-        ROOT_DIR_PATH / "real-benchmarks" / "data",
-        ROOT_DIR_PATH / "real-benchmarks" / "plots",
-    )
-    df_instructions, df_cycles, df_uops = collect_data(PIPELINES)
+    df_cycles = collect_cycles(RESULTS_DIR)
 
-    df_instructions.to_csv(
-        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_instruction.csv", index=False
-    )
-    df_cycles.to_csv(
-        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_cycles.csv", index=False
-    )
-    df_uops.to_csv(
-        ROOT_DIR_PATH / "real-benchmarks" / "data" / "raw_uops.csv", index=False
-    )
-
-    if df_instructions.empty or df_cycles.empty or df_uops.empty:
-        print("No .out files found.", file=sys.stderr)
+    if df_cycles.empty:
+        print(f"No gem5 stats found in {RESULTS_DIR}", file=sys.stderr)
+        sys.exit(1)
+    if BASELINE not in df_cycles.columns:
+        print(f"baseline {BASELINE!r} missing from inputs", file=sys.stderr)
         sys.exit(1)
 
-    data_dir = ROOT_DIR_PATH / "real-benchmarks" / "data"
-    data_dir.mkdir(exist_ok=True)
+    df_ratios, geomeans = compute_ratios(df_cycles, PIPELINES, BASELINE)
 
-    tex_tables = [
-        (df_cycles, "num_cycles_table_real.tex", "\\#Cycles per iteration"),
-        (
-            df_instructions,
-            "tot_instructions_table_real.tex",
-            "\\#Instructions per iteration",
-        ),
-    ]
-    for data, filename, caption in tex_tables:
-        path = data_dir / filename
-        latex_content = latex_table(data, caption, filename.replace(".tex", ""))
-        with open(path, "w") as f:
-            f.write(latex_content)
-        print(f"Written {path}")    
-    
+    # Order rows by ascending unoptimized-VeIR ratio (smallest ratio on top).
+    # df_cycles and df_ratios share an index, so reorder both to keep aligned.
+    veir = "VEIR_REGALLOC_ASM"
+    if veir in df_ratios.columns:
+        order = df_ratios.sort_values(veir, kind="stable").index
+        df_cycles = df_cycles.loc[order].reset_index(drop=True)
+        df_ratios = df_ratios.loc[order].reset_index(drop=True)
 
-    png_tables = [
-        (
-            df_cycles,
-            "num_cycles_table_real.png",
-            "#Cycles per iteration",
-        ),
-        (
-            df_instructions,
-            "tot_instructions_table_real.png",
-            "#Instructions per iteration",
-        ),
-    ]
+    # CSV: raw cycles, and ratios with a trailing geomean row.
+    df_cycles.to_csv(DATA_DIR / "cycles_raw.csv", index=False)
+    geo_row = {"benchmark": "geomean", **{p: geomeans[p] for p in geomeans}}
+    ratios_out = pd.concat(
+        [df_ratios, pd.DataFrame([geo_row])], ignore_index=True
+    )
+    ratios_out.to_csv(DATA_DIR / "cycles_ratios.csv", index=False)
+    print(f"Written {DATA_DIR / 'cycles_raw.csv'}")
+    print(f"Written {DATA_DIR / 'cycles_ratios.csv'}")
 
-    plots = []
+    tex_path = DATA_DIR / "cycles_ratio_table_real.tex"
+    tex_path.write_text(
+        latex_table(
+            df_cycles, df_ratios, geomeans, PIPELINES, "cycles_ratio_table_real"
+        )
+    )
+    print(f"Written {tex_path}")
 
-    for data, filename, title in png_tables:
-        path = data_dir / filename
-        render_table_as_png(data, title, path)
-        plots.append(path)
-        print(f"Written {path}")
+    png_path = DATA_DIR / "cycles_ratio_table_real.png"
+    render_table_as_png(
+        df_cycles,
+        df_ratios,
+        geomeans,
+        PIPELINES,
+        "#Cycles per iteration (ratio vs SelectionDAG)",
+        png_path,
+    )
+    print(f"Written {png_path}")
 
     if not upload:
         print("Skipping Zulip upload (--no-upload).")
@@ -196,18 +252,15 @@ def main(upload=True):
         machine_hostname(),
         machine_uname(),
         git_hash(),
-        [
-            "Real benchmarks - #Cycles, Veir-LLVM vs. selectionDAG ",
-            "Real benchmarks - #Instructions, Veir-LLVM vs. selectionDAG ",
-        ],
-        plots,
+        ["Real benchmarks - #Cycles, VeIR / GlobalISel vs. SelectionDAG"],
+        [png_path],
     )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="table-real",
-        description="Build #instructions/#cycles tables for real benchmarks.",
+        description="Build the #Cycles (ratio vs SelectionDAG) table for real benchmarks.",
     )
     parser.add_argument(
         "--no-upload",

@@ -48,6 +48,31 @@ jobs:
           build-args: "--iofail"
           test: false
           lake-package-directory: "veir"
+          
+      - name: Set up Gem5
+        run: git submodule update --init -- gem5
+
+      - name: Get gem5 submodule SHA
+        id: gem5-sha
+        run: echo "sha=$(git rev-parse HEAD:gem5)" >> "$GITHUB_OUTPUT"
+
+      # Cache only the final binary: it is self-contained (embeds its Python
+      # standard library), and the full scons build tree exceeds GitHub's
+      # 10 GB cache quota.
+      - name: Cache gem5 binary
+        id: gem5-cache
+        uses: actions/cache@v4
+        with:
+          path: gem5/build/RISCV/gem5.opt
+          key: gem5-riscv-${{ steps.gem5-sha.outputs.sha }}
+
+      - name: Install gem5 build dependencies
+        if: steps.gem5-cache.outputs.cache-hit != 'true'
+        run: sudo apt-get install -y scons python3-dev m4
+
+      - name: Build Gem5
+        if: steps.gem5-cache.outputs.cache-hit != 'true'
+        run: cd gem5 && scons build/RISCV/gem5.opt -j "$(nproc)"
 
       - name: Build Bugs
         uses: leanprover/lean-action@v1
@@ -64,107 +89,3 @@ jobs:
       - name: Make tests
         run: make all
 
-      - name: Upload plots
-        uses: actions/upload-artifact@v4
-        with:
-          name: mca-plots
-          path: |
-            synthetic-benchmarks/plots/
-            synthetic-benchmarks/data/
-            real-benchmarks/data/
-
-      - name: Convert plots to PNG
-        if: github.event_name == 'pull_request'
-        run: |
-          pdftoppm -r 150 -png \
-            synthetic-benchmarks/plots/proportional_tot_cycles_VEIR_llvm_vs_LLVM_globalisel.pdf \
-            /tmp/tot_cycles_globalisel_plot
-          pdftoppm -r 150 -png \
-            synthetic-benchmarks/plots/proportional_tot_cycles_VEIR_llvm_vs_LLVM_selectiondag.pdf \
-            /tmp/tot_cycles_selectiondag_plot
-
-      - name: Post PR comment with plots
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs')
-
-            const assets = [
-              {
-                file: '/tmp/tot_cycles_globalisel_plot-1.png',
-                path: `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel.png`,
-                alt: 'tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_globalisel',
-              },
-              {
-                file: '/tmp/tot_cycles_selectiondag_plot-1.png',
-                path: `pr-${context.issue.number}/tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag.png`,
-                alt: 'tot_cycles_proportional_bar_VEIR_llvm_vs_LLVM_selectiondag',
-              },
-              {
-                file: 'real-benchmarks/data/tot_instructions_table_real.png',
-                path: `pr-${context.issue.number}/tot_instructions_table_real.png`,
-                alt: 'Real benchmarks — #instructions per iteration',
-              },
-              {
-                file: 'real-benchmarks/data/num_cycles_table_real.png',
-                path: `pr-${context.issue.number}/num_cycles_table_real.png`,
-                alt: 'Real benchmarks — #cycles per iteration',
-              },
-            ]
-
-            // Ensure ci-assets branch exists, creating it from the default branch if not
-            try {
-              await github.rest.repos.getBranch({ owner: context.repo.owner, repo: context.repo.repo, branch: 'ci-assets' })
-            } catch (_) {
-              const { data: head } = await github.rest.repos.getBranch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                branch: context.payload.repository.default_branch,
-              })
-              await github.rest.git.createRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: 'refs/heads/ci-assets',
-                sha: head.commit.sha,
-              })
-            }
-
-            const imageUrls = []
-            for (const asset of assets) {
-              const content = fs.readFileSync(asset.file, { encoding: 'base64' })
-
-              let sha
-              try {
-                const { data } = await github.rest.repos.getContent({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  path: asset.path,
-                  ref: 'ci-assets',
-                })
-                sha = data.sha
-              } catch (_) {}
-
-              await github.rest.repos.createOrUpdateFileContents({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                path: asset.path,
-                message: `ci: update plot for PR #${context.issue.number}`,
-                content,
-                branch: 'ci-assets',
-                ...(sha && { sha }),
-              })
-
-              imageUrls.push({
-                url: `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${asset.path}`,
-                alt: asset.alt,
-              })
-            }
-
-            const body = imageUrls.map(({ url, alt }) => `![${alt}](${url})`).join('\n\n')
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body,
-            })

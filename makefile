@@ -8,22 +8,8 @@
 all: pipeline
 
 pipeline: 
-	uv run synthetic-benchmarks/generate.py -j 4
-	uv run synthetic-benchmarks/mca.py
-	uv run synthetic-benchmarks/plot.py
-	
 	uv run real-benchmarks/generate.py
-	uv run real-benchmarks/mca.py
-	uv run real-benchmarks/table.py
-	
-# Quick single-thread run pipeline for testing purposes
-quick: 
-	uv run synthetic-benchmarks/generate.py -j 1 -n 5
-	uv run synthetic-benchmarks/mca.py
-	uv run synthetic-benchmarks/plot.py
-	
-	uv run real-benchmarks/generate.py -j 1
-	uv run real-benchmarks/mca.py
+	uv run real-benchmarks/bench.py
 	uv run real-benchmarks/table.py
 
 
