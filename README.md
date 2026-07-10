@@ -60,12 +60,8 @@ make pipeline
 
 is equivalent to:
 ```
-uv run synthetic-benchmarks/generate.py -j 4
-uv run synthetic-benchmarks/mca.py
-uv run synthetic-benchmarks/plot.py
-
 uv run real-benchmarks/generate.py
-uv run real-benchmarks/mca.py
+uv run real-benchmarks/bench.py
 uv run real-benchmarks/table.py
 ```
 
@@ -76,47 +72,6 @@ size (`generate.py -j 1 -n 5`), for a fast local smoke-test.
 pipeline scripts and the `MLIR_multi` fuzzer corpus untouched.
 
 Each script also runs standalone via `uv run <path>` and takes its own flags.
-
-## Synthetic benchmarks (`synthetic-benchmarks/`)
-
-`generate.py` populates the folders in `synthetic-benchmarks/` by running the following:
-- For each file in `MLIR_multi`, extract `num` single MLIR modules and save them in
-  `MLIR_single/`. Each extracted filename contains two numbers consistent throughout the lowering
-  (e.g. `size_function_num`, where `size` is the initial program size from `generate_multi.py`).
-- Using `mlir-opt`, lift each module's `func.func` and print it in generic syntax, saved into
-  `LLVMIR/*.mlir`.
-- Using `mlir-translate`, convert those to textual LLVM IR, saved into `LLVM/*.ll`.
-- Using `opt`, optimize (`O2`) the LLVM IR with, saved into `LLVM_preopt/*.ll`. This optimized IR is what
-  actually gets lowered by every toolchain below (so all toolchains are compared on the same,
-  optimized input).
-- Using `mlir-translate` again, lift the optimized LLVM IR back to MLIR (`MLIR_preopt/*.mlir`),
-  purely so its first basic block can be extracted for the VeIR toolchain.
-
-Then the optimized IR is lowered through three toolchains, for comparison:
-
-*LLVM toolchain*
-- `llc` with SelectionDAG: `LLC_ASM_selectiondag/*.s`
-- `llc` with GlobalISel: `LLC_ASM_globalisel/*.s`
-
-*VeIR toolchain (two register allocators)*
-- Extract the first block `bb0` from `MLIR_preopt/*.mlir` to `MLIR_bb0_veir/*.mlir`.
-- Run VeIR's instruction selection (`veir-opt`), potentially in parallel via `-j`/`--jobs`
-  and save the result ot `VEIR_ASM/*.mlir`.
-- Convert to MIR (`veir2mir`), save in `VEIR_MIR/*.mir`, then run `llc`'s register allocator on it,
-  generating `VEIR_REGALLOC_ASM/*.s` (the "veir_llvm" pipeline in the results).
-
-
-Each step produces a log file in `logs/`, named after the function and the pass that
-produced it.
-
-`mca.py` then runs `llvm-mca` (targeting `riscv64`, `sifive-u74`, `-mattr=+m,+b,+zbb,+zbs,+zba,+zicond`) over
-`LLC_ASM_globalisel`, `LLC_ASM_selectiondag`, and `VEIR_REGALLOC_ASM`, writing
-`.out` files into `results/{LLVM_globalisel,LLVM_selectiondag,VEIR_llvm}/`.
-
-`plot.py` parses those `.out` files into comparison dataframes (`#instructions`, `#cycles`,
-`#uops`) saved as CSVs in `data/`, and renders stacked-bar/
-violin/proportional-bar plots into `plots/` (plus a LaTeX file of the numeric
-summary commands, and an optional Zulip upload).
 
 ## Real benchmarks (`real-benchmarks/`)
 
@@ -129,8 +84,9 @@ summary commands, and an optional Zulip upload).
 - VeIR toolchain: extract `bb0` and save in `MLIR_bb0_veir/`, invoke `veir-opt` and generate `VEIR_ASM/`
 - Use the `veir2mir` tool (`VEIR_MIR/`) to generate the MIR representation, register allocate with `llc` (`VEIR_REGALLOC_ASM/`)
 
-`mca.py` runs `llvm-mca` over `VEIR_REGALLOC_ASM`, `LLC_ASM_globalisel` and
-`LLC_ASM_selectiondag`, writing to `results/{VEIR,LLVM_globalisel,LLVM_selectiondag}/`.
+
+`bench.py` then runs the gem5 simulator on all the assembly files, hooking them into the harnesses 
+defined in `real-benchmarks/harnesses/`
 
 `table.py` parses those results into LaTeX and PNG tables of #instructions and #cycles per
 iteration, saved into `data/`, and optionally uploads them to Zulip.
@@ -143,7 +99,7 @@ Shared library backing both pipelines, installed as an editable path dependency:
 - `generate.py` — all the lowering-step wrappers (`mlir-opt`/`mlir-translate`/`llc`/
   `veir-opt`/`veir2mir`), directory setup/cleanup, and the MLIR extraction/sanitization
   helpers that turn fuzzer output into individually testable functions.
-- `mca.py` — directory setup and the `llvm-mca` file/folder runners.
+- `bench.py` — directory setup and the `llvm-mca` file/folder runners.
 - `plot.py` — dataframe construction, all the plot types (scatter/bar/violin/proportional/
   geomean), LaTeX table/command generation, PDF→JPG conversion, and the Zulip upload helper.
 - `lib.py` — small provenance helpers (`root_dir`, `git_hash`, `machine_username`,
