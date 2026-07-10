@@ -48,6 +48,11 @@ jobs:
           build-args: "--iofail"
           test: false
           lake-package-directory: "veir"
+          
+      - name: Set up Gem5
+      
+        run: git submodule update --init -- gem5
+        run: cd gem5 && scons build/RISCV/gem5.opt -j 4
 
       - name: Build Bugs
         uses: leanprover/lean-action@v1
