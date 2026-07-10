@@ -35,7 +35,7 @@ real-benchmarks/VEIR_MIR
 real-benchmarks/VEIR_OPT_MIR
 synthetic-benchmarks/VEIR_MIR
 synthetic-benchmarks/VEIR_REGALLOC_ASM
-synthetic-benchmarks/VEIR_OPT_REGALLOC_ASM
+real-benchmarks/VEIR_OPT_REGALLOC_ASM
 real-benchmarks/VEIR_REGALLOC_ASM
 *.jpg
 utils/build/

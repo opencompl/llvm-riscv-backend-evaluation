@@ -71,9 +71,9 @@ AUTOGEN_DIR_PATHS = [
     LLVMIR_DIR_PATH,
     MLIR_bb0_VEIR_DIR_PATH,
     LLC_ASM_selectiondag_DIR_PATH,
-    LLC_ASM_selectiondag_unopt_DIR_PATH,
+    # LLC_ASM_selectiondag_unopt_DIR_PATH,
     LLC_ASM_globalisel_DIR_PATH,
-    LLC_ASM_globalisel_unopt_DIR_PATH,
+    # LLC_ASM_globalisel_unopt_DIR_PATH,
     VEIR_ASM_DIR_PATH,
     VEIR_MIR_DIR_PATH,
     VEIR_REGALLOC_ASM_DIR_PATH,
@@ -195,19 +195,19 @@ def generate_benchmarks(jobs):
     )
 
     # selectionDAG - no combines
-    LLC_file2ret = dict()
-    apply_lowering_to_folder(
-        LLVM_OPTIMIZED_DIR_PATH,
-        LLC_ASM_selectiondag_unopt_DIR_PATH,
-        LOGS_DIR_PATH,
-        llvmir_file2ret,
-        LLC_file2ret,
-        LLC_selectiondag_no_combines,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "LLC-selectionDAG-noopt",
-        ".s",
-    )
+    # LLC_file2ret = dict()
+    # apply_lowering_to_folder(
+    #     LLVM_OPTIMIZED_DIR_PATH,
+    #     LLC_ASM_selectiondag_unopt_DIR_PATH,
+    #     LOGS_DIR_PATH,
+    #     llvmir_file2ret,
+    #     LLC_file2ret,
+    #     LLC_selectiondag_no_combines,
+    #     ROOT_DIR_PATH,
+    #     TIMEOUT,
+    #     "LLC-selectionDAG-noopt",
+    #     ".s",
+    # )
 
     # globalisel
     LLC_file2ret = dict()
@@ -224,20 +224,20 @@ def generate_benchmarks(jobs):
         ".s",
     )
 
-    # globalisel no combines
-    LLC_file2ret = dict()
-    apply_lowering_to_folder(
-        LLVM_OPTIMIZED_DIR_PATH,
-        LLC_ASM_globalisel_unopt_DIR_PATH,
-        LOGS_DIR_PATH,
-        llvmir_file2ret,
-        LLC_file2ret,
-        LLC_globalisel_no_combines,
-        ROOT_DIR_PATH,
-        TIMEOUT,
-        "LLC-globalISel-noopt",
-        ".s",
-    )
+    # # globalisel no combines
+    # LLC_file2ret = dict()
+    # apply_lowering_to_folder(
+    #     LLVM_OPTIMIZED_DIR_PATH,
+    #     LLC_ASM_globalisel_unopt_DIR_PATH,
+    #     LOGS_DIR_PATH,
+    #     llvmir_file2ret,
+    #     LLC_file2ret,
+    #     LLC_globalisel_no_combines,
+    #     ROOT_DIR_PATH,
+    #     TIMEOUT,
+    #     "LLC-globalISel-noopt",
+    #     ".s",
+    # )
 
     # extract basic block
     extract_basic_block_folder(
