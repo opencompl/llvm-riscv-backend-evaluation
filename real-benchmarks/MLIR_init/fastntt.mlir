@@ -52,8 +52,10 @@
         %57 = "llvm.add"(%56, %arg49_0) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %58 = "llvm.getelementptr"(%arg7_0, %57) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %59 = "llvm.load"(%58) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 8 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i64
+        %60 = "llvm.mul"(%arg42_0, %arg27_3) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %61 = "llvm.add"(%60, %arg49_0) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %62 = "llvm.sdiv"(%arg27_3, %9) : (i64, i64) -> i64
-        %63 = "llvm.add"(%57, %62) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %63 = "llvm.add"(%61, %62) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %64 = "llvm.getelementptr"(%arg7_0, %63) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %65 = "llvm.load"(%64) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 8 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i64
         %66 = "llvm.mul"(%9, %arg49_0) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
@@ -65,12 +67,20 @@
         %72 = "llvm.srem"(%71, %arg7_2) : (i64, i64) -> i64
         %73 = "llvm.add"(%59, %72) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %74 = "llvm.srem"(%73, %arg7_2) : (i64, i64) -> i64
-        %77 = "llvm.sub"(%59, %72) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %75 = "llvm.mul"(%70, %65) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %76 = "llvm.srem"(%75, %arg7_2) : (i64, i64) -> i64
+        %77 = "llvm.sub"(%59, %76) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %78 = "llvm.add"(%77, %arg7_2) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %79 = "llvm.srem"(%78, %arg7_2) : (i64, i64) -> i64
-        %82 = "llvm.getelementptr"(%arg7_0, %57) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %80 = "llvm.mul"(%arg42_0, %arg27_3) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %81 = "llvm.add"(%80, %arg49_0) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %82 = "llvm.getelementptr"(%arg7_0, %81) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         "llvm.store"(%74, %82) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 8 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i64, !llvm.ptr) -> ()
-        %88 = "llvm.getelementptr"(%arg7_0, %63) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %84 = "llvm.mul"(%arg42_0, %arg27_3) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %85 = "llvm.add"(%84, %arg49_0) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %86 = "llvm.sdiv"(%arg27_3, %9) : (i64, i64) -> i64
+        %87 = "llvm.add"(%85, %86) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %88 = "llvm.getelementptr"(%arg7_0, %87) <{"elem_type" = i64, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         "llvm.store"(%79, %88) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 8 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i64, !llvm.ptr) -> ()
         "llvm.br"() [^90] : () -> ()
       ^90():

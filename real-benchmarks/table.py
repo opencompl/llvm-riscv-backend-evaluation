@@ -9,7 +9,6 @@ from pathlib import Path
 import pandas as pd
 
 from utils.plot import (
-    upload_to_zulip,
     setup_plotting_directories,
     light_blue,
 )
@@ -191,7 +190,7 @@ def render_table_as_png(df_cycles, df_ratios, geomeans, pipelines, title, filepa
     plt.close()
 
 
-def main(upload=True):
+def main():
     setup_plotting_directories(DATA_DIR, PLOTS_DIR)
 
     df_cycles = collect_cycles(RESULTS_DIR)
@@ -242,30 +241,8 @@ def main(upload=True):
     )
     print(f"Written {png_path}")
 
-    if not upload:
-        print("Skipping Zulip upload (--no-upload).")
-        return
-
-    upload_to_zulip(
-        root_dir(),
-        machine_username(),
-        machine_hostname(),
-        machine_uname(),
-        git_hash(),
-        ["Real benchmarks - #Cycles, VeIR / GlobalISel vs. SelectionDAG"],
-        [png_path],
-    )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="table-real",
-        description="Build the #Cycles (ratio vs SelectionDAG) table for real benchmarks.",
-    )
-    parser.add_argument(
-        "--no-upload",
-        action="store_true",
-        help="Write CSV/TeX/PNG tables locally but do not upload to Zulip.",
-    )
-    args = parser.parse_args()
-    main(upload=not args.no_upload)
+
+    main()

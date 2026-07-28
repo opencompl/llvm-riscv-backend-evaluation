@@ -31,7 +31,8 @@
         %33 = "llvm.sub"(%32, %29) : (i32, i32) -> i32
         %34 = "llvm.and"(%30, %33) : (i32, i32) -> i32
         %35 = "llvm.add"(%27, %34) : (i32, i32) -> i32
-        %37 = "llvm.ashr"(%35, %31) : (i32, i32) -> i32
+        %36 = "llvm.zext"(%17) : (i8) -> i32
+        %37 = "llvm.ashr"(%35, %36) : (i32, i32) -> i32
         %38 = "llvm.xor"(%37, %19) : (i32, i32) -> i32
         %39 = "llvm.sub"(%38, %19) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
         "llvm.store"(%39, %arg7_2) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i32, !llvm.ptr) -> ()

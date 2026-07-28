@@ -38,7 +38,8 @@
         %41 = "llvm.sext"(%arg35_0) : (i32) -> i64
         %42 = "llvm.getelementptr"(%arg7_1, %41) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %43 = "llvm.load"(%42) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
-        %45 = "llvm.getelementptr"(%arg7_3, %41) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %44 = "llvm.sext"(%arg35_0) : (i32) -> i64
+        %45 = "llvm.getelementptr"(%arg7_3, %44) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         "llvm.store"(%43, %45) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i32, !llvm.ptr) -> ()
         "llvm.br"() [^47] : () -> ()
       ^47():
@@ -58,14 +59,18 @@
         %62 = "llvm.sub"(%20, %29) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
         %63 = "llvm.shl"(%60, %62) : (i32, i32) -> i32
         %64 = "llvm.or"(%61, %63) : (i32, i32) -> i32
-        %67 = "llvm.getelementptr"(%arg7_3, %58) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %65 = "llvm.sub"(%arg51_0, %28) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
+        %66 = "llvm.sext"(%65) : (i32) -> i64
+        %67 = "llvm.getelementptr"(%arg7_3, %66) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %68 = "llvm.load"(%67) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %69 = "llvm.lshr"(%68, %30) : (i32, i32) -> i32
         %70 = "llvm.sub"(%20, %30) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
         %71 = "llvm.shl"(%68, %70) : (i32, i32) -> i32
         %72 = "llvm.or"(%69, %71) : (i32, i32) -> i32
         %73 = "llvm.xor"(%64, %72) : (i32, i32) -> i32
-        %76 = "llvm.getelementptr"(%arg7_3, %58) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %74 = "llvm.sub"(%arg51_0, %28) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
+        %75 = "llvm.sext"(%74) : (i32) -> i64
+        %76 = "llvm.getelementptr"(%arg7_3, %75) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %77 = "llvm.load"(%76) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %78 = "llvm.lshr"(%77, %31) : (i32, i32) -> i32
         %79 = "llvm.xor"(%73, %78) : (i32, i32) -> i32
@@ -77,14 +82,18 @@
         %85 = "llvm.sub"(%20, %32) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
         %86 = "llvm.shl"(%83, %85) : (i32, i32) -> i32
         %87 = "llvm.or"(%84, %86) : (i32, i32) -> i32
-        %90 = "llvm.getelementptr"(%arg7_3, %81) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %88 = "llvm.sub"(%arg51_0, %24) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
+        %89 = "llvm.sext"(%88) : (i32) -> i64
+        %90 = "llvm.getelementptr"(%arg7_3, %89) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %91 = "llvm.load"(%90) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %92 = "llvm.lshr"(%91, %33) : (i32, i32) -> i32
         %93 = "llvm.sub"(%20, %33) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
         %94 = "llvm.shl"(%91, %93) : (i32, i32) -> i32
         %95 = "llvm.or"(%92, %94) : (i32, i32) -> i32
         %96 = "llvm.xor"(%87, %95) : (i32, i32) -> i32
-        %99 = "llvm.getelementptr"(%arg7_3, %81) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %97 = "llvm.sub"(%arg51_0, %24) <{"overflowFlags" = 1 : i32}> : (i32, i32) -> i32
+        %98 = "llvm.sext"(%97) : (i32) -> i64
+        %99 = "llvm.getelementptr"(%arg7_3, %98) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %100 = "llvm.load"(%99) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %101 = "llvm.lshr"(%100, %34) : (i32, i32) -> i32
         %102 = "llvm.xor"(%96, %101) : (i32, i32) -> i32
@@ -152,7 +161,8 @@
         %164 = "llvm.getelementptr"(%arg7_2, %163) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %165 = "llvm.load"(%164) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %166 = "llvm.add"(%162, %165) : (i32, i32) -> i32
-        %168 = "llvm.getelementptr"(%arg7_3, %163) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
+        %167 = "llvm.sext"(%arg137_4) : (i32) -> i64
+        %168 = "llvm.getelementptr"(%arg7_3, %167) <{"elem_type" = i32, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648>}> : (!llvm.ptr, i64) -> !llvm.ptr
         %169 = "llvm.load"(%168) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %170 = "llvm.add"(%166, %169) : (i32, i32) -> i32
         %171 = "llvm.lshr"(%arg137_8, %24) : (i32, i32) -> i32

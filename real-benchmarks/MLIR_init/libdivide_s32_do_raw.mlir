@@ -23,7 +23,8 @@
         %26 = "llvm.ashr"(%arg7_0, %8) : (i32, i32) -> i32
         %27 = "llvm.and"(%26, %25) : (i32, i32) -> i32
         %28 = "llvm.add"(%arg7_0, %27) : (i32, i32) -> i32
-        %30 = "llvm.ashr"(%28, %23) : (i32, i32) -> i32
+        %29 = "llvm.zext"(%16) : (i8) -> i32
+        %30 = "llvm.ashr"(%28, %29) : (i32, i32) -> i32
         %31 = "llvm.xor"(%30, %22) : (i32, i32) -> i32
         %32 = "llvm.sub"(%31, %22) : (i32, i32) -> i32
         "llvm.store"(%32, %arg7_3) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i32, !llvm.ptr) -> ()

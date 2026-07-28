@@ -25,7 +25,9 @@
         %28 = "llvm.ashr"(%arg7_0, %11) : (i64, i64) -> i64
         %29 = "llvm.and"(%28, %27) : (i64, i64) -> i64
         %30 = "llvm.add"(%arg7_0, %29) : (i64, i64) -> i64
-        %33 = "llvm.ashr"(%30, %25) : (i64, i64) -> i64
+        %31 = "llvm.zext"(%19) : (i8) -> i32
+        %32 = "llvm.zext"(%31) : (i32) -> i64
+        %33 = "llvm.ashr"(%30, %32) : (i64, i64) -> i64
         %34 = "llvm.sext"(%arg7_2) : (i8) -> i32
         %35 = "llvm.ashr"(%34, %12) : (i32, i32) -> i32
         %36 = "llvm.sext"(%35) : (i32) -> i64
@@ -37,7 +39,8 @@
         %42 = "llvm.zext"(%13) : (i32) -> i64
         %43 = "llvm.and"(%arg7_0, %42) : (i64, i64) -> i64
         %44 = "llvm.trunc"(%43) : (i64) -> i32
-        %46 = "llvm.and"(%arg7_1, %42) : (i64, i64) -> i64
+        %45 = "llvm.zext"(%13) : (i32) -> i64
+        %46 = "llvm.and"(%arg7_1, %45) : (i64, i64) -> i64
         %47 = "llvm.trunc"(%46) : (i64) -> i32
         %48 = "llvm.ashr"(%arg7_0, %14) : (i64, i64) -> i64
         %49 = "llvm.trunc"(%48) : (i64) -> i32
@@ -49,14 +52,19 @@
         %55 = "llvm.lshr"(%54, %14) : (i64, i64) -> i64
         %56 = "llvm.trunc"(%55) : (i64) -> i32
         %57 = "llvm.sext"(%49) : (i32) -> i64
-        %59 = "llvm.mul"(%57, %53) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %58 = "llvm.zext"(%47) : (i32) -> i64
+        %59 = "llvm.mul"(%57, %58) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %60 = "llvm.zext"(%56) : (i32) -> i64
         %61 = "llvm.add"(%59, %60) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %62 = "llvm.zext"(%44) : (i32) -> i64
         %63 = "llvm.sext"(%51) : (i32) -> i64
-        %64 = "llvm.mul"(%52, %63) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
-        %66 = "llvm.and"(%61, %42) : (i64, i64) -> i64
+        %64 = "llvm.mul"(%62, %63) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %65 = "llvm.zext"(%13) : (i32) -> i64
+        %66 = "llvm.and"(%61, %65) : (i64, i64) -> i64
         %67 = "llvm.add"(%64, %66) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
-        %70 = "llvm.mul"(%57, %63) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %68 = "llvm.sext"(%49) : (i32) -> i64
+        %69 = "llvm.sext"(%51) : (i32) -> i64
+        %70 = "llvm.mul"(%68, %69) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %71 = "llvm.ashr"(%61, %14) : (i64, i64) -> i64
         %72 = "llvm.add"(%70, %71) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %73 = "llvm.ashr"(%67, %14) : (i64, i64) -> i64

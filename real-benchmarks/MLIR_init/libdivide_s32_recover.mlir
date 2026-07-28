@@ -35,7 +35,8 @@
       ^23():
         %39 = "llvm.zext"(%16) : (i8) -> i32
         %40 = "llvm.and"(%39, %11) : (i32, i32) -> i32
-        %42 = "llvm.and"(%39, %12) : (i32, i32) -> i32
+        %41 = "llvm.zext"(%16) : (i8) -> i32
+        %42 = "llvm.and"(%41, %12) : (i32, i32) -> i32
         %43 = "llvm.icmp"(%42, %8) <{"predicate" = 1 : i64}> : (i32, i32) -> i1
         "llvm.cond_br"(%43) [^44, ^45] <{"branch_weights" = array<i32>, "operandSegmentSizes" = array<i32: 1, 0, 0>}> : (i1) -> ()
       ^44():

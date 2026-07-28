@@ -1,25 +1,25 @@
-# Evaluating Veir's backend against LLVM
+# Evaluating our backend against LLVM
 
-This repo evaluates the performance of [Veir](https://github.com/opencompl/veir)'s verified instruction selection pass
-against that of LLVM's selectors (GlobalISel and SelectionDAG). We lower a set of real C benchmarks to RISC-V assembly
+This repo evaluates the performance of a verified instruction selection pass
+based on Veir against that of LLVM's selectors (GlobalISel and SelectionDAG). We lower a set of real C benchmarks to RISC-V assembly
 through each backend and measure them with the [gem5](https://www.gem5.org/) simulator. We also reproduce some real
 LLVM bugs found via fuzzing, proving their incorrectness.
 
 Each benchmark is lowered from MLIR to RISC-V assembly across the following pipelines:
 - LLC with the GlobalISel selector
 - LLC with the SelectionDAG selector
-- Veir selector without `riscv-combine` (unoptimized) + LLC register allocator
-- Veir selector with the `riscv-combine` pass (optimized) + LLC register allocator
+- Veir-based selector without `riscv-combine` (unoptimized) + LLC register allocator
+- Veir-based selector with the `riscv-combine` pass (optimized) + LLC register allocator
 
 ## Repository layout
 
-- `llvm-project/`, `veir/`, `gem5/`: submodules
+- `veir/`: the Veir sources, plus our Veir-based backend
+- `llvm-project/`, `gem5/`: third-party dependencies, fetched by `fetch-deps.sh`
 - `build/`: build output for LLVM, created by `build.sh`
 - `real-benchmarks/`: the benchmark pipeline (generation, gem5 runs, tables)
 - `utils/`: shared Python library used by the pipeline (packaged via `utils/pyproject.toml`)
 - `Bugs.lean`: reproducing real bugs found in LLVM via fuzzing
 - `makefile`: generate all benchmarks, run gem5, produce tables
-- `.github/workflows/ci.yml`: CI running the same pipeline
 
 ## Dependencies & setup
 
@@ -30,17 +30,16 @@ The evaluation depends on:
 - a RISC-V cross toolchain for linking the gem5 binaries (`riscv64-linux-gnu-gcc`
   with a sysroot at `/usr/riscv64-linux-gnu`)
 
-All submodules are set up in `.gitmodules`. To fetch them and build everything, run:
+Veir is vendored in `veir/`. To fetch llvm-project and gem5 at the pinned
+revisions (`llvmorg-22.1.8` and gem5 `v25.1.0.0-10-gc8222cc67a`) and build
+everything, run:
 ```
-git submodule update --init --depth 1 -- llvm-project
-git submodule update --init -- veir
-git submodule update --init -- gem5
+./fetch-deps.sh
 ./build.sh
 ```
-You can use the same commands to bring in fresh versions of everything and then rebuild.
 `build.sh` builds LLVM (clang + MLIR), Veir (`lake build`), gem5 (`scons build/RISCV/gem5.opt`),
-and the `utils` package. `bench.py` additionally links against the m5 utility library, built
-from `gem5/util/m5` for RISC-V (`gem5/util/m5/build/riscv/out/libm5.a`).
+and the `utils` package. `bench.py` additionally links against the m5 utility library built
+from (`cd gem5/util/m5; scons riscv.CROSS_COMPILE=riscv64-linux-gnu- build/riscv/out/m5`).
 
 To add llvm and mlir to your path:
 ```
@@ -94,8 +93,7 @@ the same checksum for each benchmark and prints a status matrix.
 (cycles or any other stat), with each pipeline's overhead relative to a baseline.
 
 `table.py` reads the same per-run gem5 stats from `results/` and produces CSV/LaTeX/PNG
-tables of cycles per iteration with ratios against SelectionDAG, saved into `data/`, and
-optionally uploads them to Zulip.
+tables of cycles per iteration with ratios against SelectionDAG, saved into `data/`.
 
 To add a new real benchmark, add the path of the `.c` file to the `BENCHMARKS` list in
 `generate.py`, provide a matching harness in `harnesses/`, and list it in `bench.py`'s
@@ -108,18 +106,48 @@ Shared library backing the pipeline, installed as an editable path dependency:
   `veir-opt`/`veir2mir`), directory setup/cleanup, and the MLIR extraction/sanitization
   helpers.
 - `plot.py` — dataframe construction, plot types (scatter/bar/violin/proportional/
-  geomean), LaTeX table/command generation, PDF→JPG conversion, and the Zulip upload helper.
-- `lib.py` — small provenance helpers (`root_dir`, `git_hash`, `machine_username`,
-  `machine_hostname`, `machine_uname`) used to tag uploaded results.
+  geomean), LaTeX table/command generation
+- `lib.py` — small shared helpers (`root_dir`, logging setup).
 - `create_func.py` — xDSL-based helper that wraps RISC-V dialect MLIR into a function.
-- `upload_zulip.py` — posts result blurbs/plots/attachments to Zulip. Needs a `zuliprc`
-  credentials file at the repo root to actually upload; without one, generation/analysis
-  still work, only the upload step is skipped/fails.
 
 ## Formal verification (`Bugs.lean`)
 
-`Bugs.lean` (built via `lakefile.toml`, which depends on the `veir` submodule as a Lean
-package) proves that specific LLVM instruction-selection rewrites are semantically
+`Bugs.lean` (built via `lakefile.toml`, which depends on the vendored `veir` directory as a
+Lean package) proves that specific LLVM instruction-selection rewrites are semantically
 incorrect, using Veir's formal semantics for LLVM/RISC-V integers as the reference. Build it
 the same way as Veir itself, with `lake build` from the repo root (see `build.sh`).
 The `guard_msgs` calls ensure that the proofs are complete and `sorry`-free.
+
+## Sorries
+
+There are a few unproven "sorried" lemmas in the Lean files in Veir/:
+- Passes/InstructionSelection/RISCV64Branches/: branch instruction selection is unverified
+- Passes/InstCombine.lean: combines are unverified
+- Passes/CastsReconciliation/Reconciliation.lean: cast reconciliation is verified except for the case of function arguments and return values
+- Passes/DCE/dce.lean: DCE is unverified
+- Passes/RISCVCombines/: combines are unverified
+- Benchmarks.lean: not part of the trusted base
+
+
+## Correctness
+
+```
+theorem IselSDAG.impl_isModuleRefinedBy {ctx ctx' : WfIRContext OpCode} {op : OperationPtr}
+    {opInBounds : op.InBounds ctx.raw} (hDom : ctx.Dom) (hVerif : ctx.Verified)
+    (himpl : IselSDAG.impl ctx op opInBounds = pure ctx') :
+    ctx'.Dom ∧ ctx'.Verified ∧
+      ∀ moduleOp : OperationPtr, moduleOp.isModuleRefinedBy ctx moduleOp ctx' :=
+  RewritePattern.isModuleRefinedBy_applyInContext_greedy_fromLocalRewrite
+    IselSDAG.exists_valid_local_of_mem_patterns hDom hVerif
+    (IselSDAG.applyInContext_of_impl himpl)
+
+theorem ISelPass.impl_isModuleRefinedBy {ctx ctx' : WfIRContext OpCode} {op : OperationPtr}
+    {opInBounds : op.InBounds ctx.raw} (hDom : ctx.Dom) (hVerif : ctx.Verified)
+    (himpl : ISelPass.impl ctx op opInBounds = pure ctx') :
+    ctx'.Dom ∧ ctx'.Verified ∧
+      ∀ moduleOp : OperationPtr, moduleOp.isModuleRefinedBy ctx moduleOp ctx' :=
+  RewritePattern.isModuleRefinedBy_applyInContext_greedy_fromLocalRewrite
+    ISelPass.exists_valid_local_of_mem_patterns hDom hVerif
+    (ISelPass.applyInContext_of_impl himpl)
+```
+Our two central lifting theorems state that applying our SDAG and ISEL instruction selection rewrites with a greed pattern rewriter preserves module refinement. The proof depends her on the verification of the VeIR compiler data structures (which are proven), as well as hypothesis or program structure preservation and that the program is well-dominated (which VeIR axiomatizes). Furthermore, Lean reports bv_decide's use of native_decide as an axiom as it sidesteps kernel checking. While VeIR's pointer-based data-structure leads to long proofs, our proof is mostly standard as described in section 3.4.

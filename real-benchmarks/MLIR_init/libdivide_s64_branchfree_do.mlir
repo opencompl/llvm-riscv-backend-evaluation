@@ -24,7 +24,8 @@
         %27 = "llvm.zext"(%12) : (i32) -> i64
         %28 = "llvm.and"(%arg7_0, %27) : (i64, i64) -> i64
         %29 = "llvm.trunc"(%28) : (i64) -> i32
-        %31 = "llvm.and"(%26, %27) : (i64, i64) -> i64
+        %30 = "llvm.zext"(%12) : (i32) -> i64
+        %31 = "llvm.and"(%26, %30) : (i64, i64) -> i64
         %32 = "llvm.trunc"(%31) : (i64) -> i32
         %33 = "llvm.ashr"(%arg7_0, %13) : (i64, i64) -> i64
         %34 = "llvm.trunc"(%33) : (i64) -> i32
@@ -36,14 +37,19 @@
         %40 = "llvm.lshr"(%39, %13) : (i64, i64) -> i64
         %41 = "llvm.trunc"(%40) : (i64) -> i32
         %42 = "llvm.sext"(%34) : (i32) -> i64
-        %44 = "llvm.mul"(%42, %38) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %43 = "llvm.zext"(%32) : (i32) -> i64
+        %44 = "llvm.mul"(%42, %43) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %45 = "llvm.zext"(%41) : (i32) -> i64
         %46 = "llvm.add"(%44, %45) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %47 = "llvm.zext"(%29) : (i32) -> i64
         %48 = "llvm.sext"(%36) : (i32) -> i64
-        %49 = "llvm.mul"(%37, %48) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
-        %51 = "llvm.and"(%46, %27) : (i64, i64) -> i64
+        %49 = "llvm.mul"(%47, %48) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %50 = "llvm.zext"(%12) : (i32) -> i64
+        %51 = "llvm.and"(%46, %50) : (i64, i64) -> i64
         %52 = "llvm.add"(%49, %51) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
-        %55 = "llvm.mul"(%42, %48) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
+        %53 = "llvm.sext"(%34) : (i32) -> i64
+        %54 = "llvm.sext"(%36) : (i32) -> i64
+        %55 = "llvm.mul"(%53, %54) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %56 = "llvm.ashr"(%46, %13) : (i64, i64) -> i64
         %57 = "llvm.add"(%55, %56) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         %58 = "llvm.ashr"(%52, %13) : (i64, i64) -> i64
@@ -59,7 +65,9 @@
         %68 = "llvm.sub"(%67, %63) : (i64, i64) -> i64
         %69 = "llvm.and"(%64, %68) : (i64, i64) -> i64
         %70 = "llvm.add"(%60, %69) : (i64, i64) -> i64
-        %73 = "llvm.ashr"(%70, %66) : (i64, i64) -> i64
+        %71 = "llvm.zext"(%21) : (i8) -> i32
+        %72 = "llvm.zext"(%71) : (i32) -> i64
+        %73 = "llvm.ashr"(%70, %72) : (i64, i64) -> i64
         %74 = "llvm.xor"(%73, %24) : (i64, i64) -> i64
         %75 = "llvm.sub"(%74, %24) <{"overflowFlags" = 1 : i32}> : (i64, i64) -> i64
         "llvm.store"(%75, %arg7_2) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 8 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i64, !llvm.ptr) -> ()
