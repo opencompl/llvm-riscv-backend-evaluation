@@ -28,7 +28,9 @@ The evaluation depends on:
 - Veir (built with `lake`, installed via [elan](https://github.com/leanprover/elan))
 - gem5 (plus `scons` to build it)
 - a RISC-V cross toolchain for linking the gem5 binaries (`riscv64-linux-gnu-gcc`
-  with a sysroot at `/usr/riscv64-linux-gnu`)
+  with a sysroot at `/usr/riscv64-linux-gnu`; it also provides the `libgcc`/crt
+  runtime under `/usr/lib/gcc-cross`, which `bench.py` points clang at via
+  `--gcc-toolchain=/usr`)
 - build tools: `cmake`, `ninja`, a host C++ compiler (clang), and
   [uv](https://docs.astral.sh/uv/) for the Python scripts
 
@@ -142,3 +144,4 @@ package) proves that specific LLVM instruction-selection rewrites are semantical
 incorrect, using Veir's formal semantics for LLVM/RISC-V integers as the reference. Build it
 the same way as Veir itself, with `lake build` from the repo root (see `build.sh`).
 The `guard_msgs` calls ensure that the proofs are complete and `sorry`-free.
+

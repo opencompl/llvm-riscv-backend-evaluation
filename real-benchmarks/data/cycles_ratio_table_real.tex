@@ -6,17 +6,17 @@
         \cmidrule(lr){3-6}
         \textbf{\#} & \textbf{Benchmark} & \textbf{Veir (unoptimized)} & \textbf{Veir (optimized)} & \textbf{GlobalISel} & \textbf{SelectionDAG} \\
         \midrule
-        1 & \texttt{libdivide\_s64\_do\_raw} & 293 (1.1x) & 280 (1.0x) & 262 (1.0x) & 271 (1.0x) \\
-        2 & \texttt{libdivide\_u32\_do\_raw} & 202 (1.1x) & 185 (1.0x) & 184 (1.0x) & 184 (1.0x) \\
-        3 & \texttt{libdivide\_s64\_branchfree\_do} & 242 (1.1x) & 217 (1.0x) & 208 (1.0x) & 216 (1.0x) \\
-        4 & \texttt{libdivide\_s32\_do\_raw} & 290 (1.4x) & 236 (1.2x) & 196 (1.0x) & 202 (1.0x) \\
-        5 & \texttt{fastntt} & 44579 (1.5x) & 33101 (1.1x) & 30334 (1.0x) & 30117 (1.0x) \\
-        6 & \texttt{libdivide\_s32\_branchfree\_do} & 278 (1.6x) & 193 (1.1x) & 162 (0.9x) & 172 (1.0x) \\
-        7 & \texttt{libdivide\_s64\_recover} & 419 (1.6x) & 295 (1.2x) & 218 (0.9x) & 255 (1.0x) \\
-        8 & \texttt{libdivide\_s32\_recover} & 271 (1.7x) & 224 (1.4x) & 146 (0.9x) & 161 (1.0x) \\
-        9 & \texttt{sha256} & 24614 (2.7x) & 18473 (2.0x) & 10617 (1.2x) & 9017 (1.0x) \\
-        10 & \texttt{libdivide\_internal\_u64\_gen} & 1240 (2.8x) & 917 (2.1x) & 500 (1.1x) & 444 (1.0x) \\
-        11 & \texttt{libdivide\_internal\_s64\_gen} & 1178 (2.9x) & 938 (2.3x) & 468 (1.2x) & 402 (1.0x) \\
+        1 & \texttt{libdivide\_s64\_branchfree\_do} & 244 (1.1x) & 225 (1.0x) & 217 (1.0x) & 222 (1.0x) \\
+        2 & \texttt{libdivide\_u32\_do\_raw} & 192 (1.1x) & 174 (1.0x) & 175 (1.0x) & 175 (1.0x) \\
+        3 & \texttt{libdivide\_s64\_do\_raw} & 295 (1.2x) & 263 (1.1x) & 239 (1.0x) & 248 (1.0x) \\
+        4 & \texttt{libdivide\_s64\_recover} & 331 (1.4x) & 306 (1.3x) & 207 (0.9x) & 243 (1.0x) \\
+        5 & \texttt{libdivide\_s32\_do\_raw} & 278 (1.4x) & 239 (1.2x) & 194 (1.0x) & 197 (1.0x) \\
+        6 & \texttt{fastntt} & 44579 (1.5x) & 33100 (1.1x) & 30374 (1.0x) & 30116 (1.0x) \\
+        7 & \texttt{libdivide\_s32\_branchfree\_do} & 280 (1.6x) & 195 (1.1x) & 165 (0.9x) & 176 (1.0x) \\
+        8 & \texttt{libdivide\_s32\_recover} & 329 (2.0x) & 221 (1.4x) & 152 (0.9x) & 162 (1.0x) \\
+        9 & \texttt{libdivide\_internal\_u64\_gen} & 1229 (2.7x) & 929 (2.1x) & 505 (1.1x) & 448 (1.0x) \\
+        10 & \texttt{libdivide\_internal\_s64\_gen} & 1143 (2.8x) & 956 (2.4x) & 472 (1.2x) & 406 (1.0x) \\
+        11 & \texttt{sha256} & 30488 (3.4x) & 17627 (2.0x) & 10621 (1.2x) & 9021 (1.0x) \\
         \midrule
         & \textbf{geomean} & 1.7x & 1.3x & 1.0x & 1.0x \\
         \bottomrule
