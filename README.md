@@ -13,8 +13,7 @@ Each benchmark is lowered from MLIR to RISC-V assembly across the following pipe
 
 ## Repository layout
 
-- `llvm-project/`, `veir/`, `gem5/`: submodules
-- `build/`: build output for LLVM, created by `build.sh`
+- `llvm-project/`, `veir/`, `gem5/`: submodules; LLVM builds in-tree into `llvm-project/build/`
 - `real-benchmarks/`: the benchmark pipeline (generation, gem5 runs, tables)
 - `utils/`: shared Python library used by the pipeline (packaged via `utils/pyproject.toml`)
 - `Bugs.lean`: reproducing real bugs found in LLVM via fuzzing
@@ -24,11 +23,16 @@ Each benchmark is lowered from MLIR to RISC-V assembly across the following pipe
 ## Dependencies & setup
 
 The evaluation depends on:
-- LLVM with clang and MLIR
-- Veir
+- LLVM with clang and MLIR, built from the `llvm-project/` submodule (the pipeline
+  invokes `mlir-opt`, `mlir-translate`, `opt`, `llc`, and `clang` from it)
+- Veir (built with `lake`, installed via [elan](https://github.com/leanprover/elan))
 - gem5 (plus `scons` to build it)
 - a RISC-V cross toolchain for linking the gem5 binaries (`riscv64-linux-gnu-gcc`
-  with a sysroot at `/usr/riscv64-linux-gnu`)
+  with a sysroot at `/usr/riscv64-linux-gnu`; it also provides the `libgcc`/crt
+  runtime under `/usr/lib/gcc-cross`, which `bench.py` points clang at via
+  `--gcc-toolchain=/usr`)
+- build tools: `cmake`, `ninja`, a host C++ compiler (clang), and
+  [uv](https://docs.astral.sh/uv/) for the Python scripts
 
 All submodules are set up in `.gitmodules`. To fetch them and build everything, run:
 ```
@@ -42,9 +46,26 @@ You can use the same commands to bring in fresh versions of everything and then 
 and the `utils` package. `bench.py` additionally links against the m5 utility library, built
 from `gem5/util/m5` for RISC-V (`gem5/util/m5/build/riscv/out/libm5.a`).
 
-To add llvm and mlir to your path:
+### Building LLVM
+
+`build.sh` configures and builds LLVM into `llvm-project/build/`. To do it manually:
 ```
-export PATH=$PATH:/LLVM_PATH/build/bin
+cmake -G Ninja \
+    -S llvm-project/llvm \
+    -B llvm-project/build \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="mlir;clang" \
+    -DLLVM_TARGETS_TO_BUILD="host;RISCV" \
+    -DLLVM_ENABLE_ASSERTIONS=ON
+ninja -C llvm-project/build
+```
+`LLVM_TARGETS_TO_BUILD` must include `RISCV`.
+
+Then add the build to your path:
+```
+export PATH="$(pwd)/llvm-project/build/bin:$PATH"
 ```
 
 The benchmark generation script (`generate.py`) is run with `uv run --script`.
@@ -123,3 +144,4 @@ package) proves that specific LLVM instruction-selection rewrites are semantical
 incorrect, using Veir's formal semantics for LLVM/RISC-V integers as the reference. Build it
 the same way as Veir itself, with `lake build` from the repo root (see `build.sh`).
 The `guard_msgs` calls ensure that the proofs are complete and `sorry`-free.
+

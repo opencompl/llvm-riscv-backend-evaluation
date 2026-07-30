@@ -5,8 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LLVM_SRC="$SCRIPT_DIR/llvm-project"
 VEIR_SRC="$SCRIPT_DIR/veir"
 GEM5_SRC="$SCRIPT_DIR/gem5"
-BUILD_DIR="$SCRIPT_DIR/build"
-LLVM_BUILD="$BUILD_DIR/llvm"
+LLVM_BUILD="$LLVM_SRC/build"
 LLVM_INSTALL="$LLVM_BUILD"
 
 info() { echo "[build] $*"; }
@@ -17,7 +16,9 @@ cmake -G Ninja \
     -B "$LLVM_BUILD" \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_BUILD_TYPE=Release \
     -DLLVM_ENABLE_PROJECTS="mlir;clang" \
+    -DLLVM_TARGETS_TO_BUILD="host;RISCV" \
     -DLLVM_ENABLE_ASSERTIONS=ON
 
 info "Building LLVM..."

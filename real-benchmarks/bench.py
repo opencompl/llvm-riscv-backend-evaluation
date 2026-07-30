@@ -319,6 +319,7 @@ def main():
                         "clang",
                         "--target=riscv64-linux-gnu",
                         f"--sysroot={args.sysroot}",
+                        "--gcc-toolchain=/usr",
                         "-fuse-ld=lld",
                         "-static",
                         str(harness_obj),

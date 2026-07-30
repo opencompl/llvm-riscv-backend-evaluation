@@ -24,15 +24,22 @@ jobs:
       - name: Install LLVM/MLIR tools
         uses: gerlero/apt-install@v1
         with:
-          packages: mlir-22-tools llvm-22
+          packages: mlir-22-tools llvm-22 clang-22 lld-22
 
       - name: Add tool symlinks
         run: |
-          sudo ln -s /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
-          sudo ln -s /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
-          sudo ln -s /usr/bin/llc-22 /usr/bin/llc
-          sudo ln -s /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
-          sudo ln -s /usr/bin/opt-22 /usr/bin/opt
+          sudo ln -sf /usr/bin/mlir-opt-22 /usr/bin/mlir-opt
+          sudo ln -sf /usr/bin/mlir-translate-22 /usr/bin/mlir-translate
+          sudo ln -sf /usr/bin/llc-22 /usr/bin/llc
+          sudo ln -sf /usr/bin/llvm-mca-22 /usr/bin/llvm-mca
+          sudo ln -sf /usr/bin/opt-22 /usr/bin/opt
+          sudo ln -sf /usr/bin/clang-22 /usr/bin/clang
+          sudo ln -sf /usr/bin/ld.lld-22 /usr/bin/ld.lld
+
+      # bench.py assembles with riscv64-linux-gnu-gcc and links static RISC-V
+      # binaries (sysroot /usr/riscv64-linux-gnu, libgcc from /usr/lib/gcc-cross).
+      - name: Install RISC-V cross toolchain
+        run: sudo apt-get install -y gcc-riscv64-linux-gnu
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -66,13 +73,20 @@ jobs:
           path: gem5/build/RISCV/gem5.opt
           key: gem5-riscv-${{ steps.gem5-sha.outputs.sha }}
 
+      # scons is needed unconditionally: the m5 utility library below is
+      # rebuilt even when the gem5 binary itself comes from the cache.
       - name: Install gem5 build dependencies
-        if: steps.gem5-cache.outputs.cache-hit != 'true'
         run: sudo apt-get install -y scons python3-dev m4
 
       - name: Build Gem5
         if: steps.gem5-cache.outputs.cache-hit != 'true'
         run: cd gem5 && scons build/RISCV/gem5.opt -j "$(nproc)"
+
+      # bench.py links every benchmark against libm5.a.
+      - name: Build m5 utility library
+        run: |
+          cd gem5/util/m5
+          scons riscv.CROSS_COMPILE=riscv64-linux-gnu- build/riscv/out/libm5.a
 
       - name: Build Bugs
         uses: leanprover/lean-action@v1
