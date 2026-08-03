@@ -8,14 +8,14 @@
         %10 = "llvm.mlir.constant"() <{"value" = 31 : i32}> : () -> i32
         %11 = "llvm.mlir.constant"() <{"value" = 7 : i32}> : () -> i32
         %12 = "llvm.mlir.constant"() <{"value" = 32 : i64}> : () -> i64
-        %13 = "llvm.getelementptr"(%arg7_1, %8) <{"elem_type" = !llvm.struct<"struct.libdivide_s32_branchfree_t", (i32, i8)>, "noWrapFlags" = 7 : i32, "rawConstantIndices" = array<i32: -2147483648, 1>}> : (!llvm.ptr, i32) -> !llvm.ptr
+        %13 = "llvm.getelementptr"(%arg7_1, %8) <{"elem_type" = !llvm.struct<"struct.libdivide_s32_branchfree_t", (i32, i8)>, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648, 1>}> : (!llvm.ptr, i32) -> !llvm.ptr
         %14 = "llvm.load"(%13) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i8
         %15 = "llvm.zext"(%14) : (i8) -> i32
         %16 = "llvm.and"(%15, %10) : (i32, i32) -> i32
         %17 = "llvm.trunc"(%16) : (i32) -> i8
         %18 = "llvm.sext"(%14) : (i8) -> i32
         %19 = "llvm.ashr"(%18, %11) : (i32, i32) -> i32
-        %20 = "llvm.getelementptr"(%arg7_1, %8) <{"elem_type" = !llvm.struct<"struct.libdivide_s32_branchfree_t", (i32, i8)>, "noWrapFlags" = 7 : i32, "rawConstantIndices" = array<i32: -2147483648, 0>}> : (!llvm.ptr, i32) -> !llvm.ptr
+        %20 = "llvm.getelementptr"(%arg7_1, %8) <{"elem_type" = !llvm.struct<"struct.libdivide_s32_branchfree_t", (i32, i8)>, "noWrapFlags" = 3 : i32, "rawConstantIndices" = array<i32: -2147483648, 0>}> : (!llvm.ptr, i32) -> !llvm.ptr
         %21 = "llvm.load"(%20) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (!llvm.ptr) -> i32
         %22 = "llvm.sext"(%arg7_0) : (i32) -> i64
         %23 = "llvm.sext"(%21) : (i32) -> i64
@@ -37,4 +37,4 @@
         "llvm.store"(%39, %arg7_2) <{"access_groups" = [], "alias_scopes" = [], "alignment" = 4 : i64, "noalias_scopes" = [], "tbaa" = []}> : (i32, !llvm.ptr) -> ()
         "llvm.return"() : () -> ()
     }) : () -> ()
-}) {"dlti.dl_spec" = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64>, "llvm.ident" = "clang version 22.1.8 (https://github.com/llvm/llvm-project.git ca7933e47d3a3451d81e72ac174dcb5aa28b59d1)", "llvm.module_asm" = [], "llvm.target_triple" = "x86_64-unknown-linux-gnu"} : () -> ()
+}) {"dlti.dl_spec" = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vector<4xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little", "dlti.mangling_mode" = "e", "dlti.legal_int_widths" = array<i32: 8, 16, 32, 64>, "dlti.stack_alignment" = 128 : i64>, "llvm.ident" = "Ubuntu clang version 18.1.3 (1ubuntu1)", "llvm.module_asm" = [], "llvm.target_triple" = "x86_64-pc-linux-gnu"} : () -> ()
