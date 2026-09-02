@@ -69,6 +69,7 @@ def report_failure(name, pipeline, stage, result, failed):
 
 
 BENCHMARKS = [
+    "chacha20.c",
     "fastntt.c",
     "sha256.c",
     "libdivide_s64_recover.c",
@@ -112,6 +113,7 @@ harness_mapping = {
 # names collide with libdivide.h's static-inline reference implementations
 # (which the harnesses include for setup and correctness checking).
 entry_point_mapping = {
+    "chacha20.c": "chacha20_block",
     "sha256.c": "sha256",
     "fastntt.c": "fastNTT",
     "libdivide_s64_recover.c": "bench_kernel",
