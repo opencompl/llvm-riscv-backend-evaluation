@@ -103,3 +103,64 @@ jobs:
       - name: Make tests
         run: make all
 
+      - name: Post PR comment with table
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs')
+
+            const asset = {
+              file: 'real-benchmarks/data/cycles_ratio_table_real.png',
+              path: `pr-${context.issue.number}/cycles_ratio_table_real.png`,
+              alt: 'Real benchmarks — #cycles per iteration (ratio vs SelectionDAG)',
+            }
+
+            // Ensure ci-assets branch exists, creating it from the default branch if not
+            try {
+              await github.rest.repos.getBranch({ owner: context.repo.owner, repo: context.repo.repo, branch: 'ci-assets' })
+            } catch (_) {
+              const { data: head } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: context.payload.repository.default_branch,
+              })
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/heads/ci-assets',
+                sha: head.commit.sha,
+              })
+            }
+
+            const content = fs.readFileSync(asset.file, { encoding: 'base64' })
+
+            let sha
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: asset.path,
+                ref: 'ci-assets',
+              })
+              sha = data.sha
+            } catch (_) {}
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: asset.path,
+              message: `ci: update table for PR #${context.issue.number}`,
+              content,
+              branch: 'ci-assets',
+              ...(sha && { sha }),
+            })
+
+            const imageUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/ci-assets/${asset.path}`
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `![${asset.alt}](${imageUrl})`,
+            })
+
