@@ -225,12 +225,6 @@ def LLVM_to_MLIR(input_file, output_file, log_file, pass_dict, root_dir, timeout
     """
     Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
     """
-    # `extract_basic_block` below deliberately keeps only one basic block.  The
-    # generic printer normally hoists shared attributes into top-level aliases
-    # (for example `#loop_annotation = #llvm.loop_annotation<...>`); such an
-    # alias would be left behind when the block is extracted.  Local scope
-    # prints the attribute at each use instead, so the extracted fragment is
-    # self-contained while retaining the loop metadata.
     cmd_base = "mlir-translate --import-llvm --mlir-print-op-generic --mlir-print-local-scope "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
