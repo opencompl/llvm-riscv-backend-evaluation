@@ -225,7 +225,7 @@ def LLVM_to_MLIR(input_file, output_file, log_file, pass_dict, root_dir, timeout
     """
     Run mlir-translate and translate a file from LLVM dialect to LLVMIR.
     """
-    cmd_base = "mlir-translate --import-llvm --mlir-print-op-generic "
+    cmd_base = "mlir-translate --import-llvm --mlir-print-op-generic --mlir-print-local-scope "
     cmd = cmd_base + input_file + " -o " + output_file
     ret_code = run_command(cmd, log_file, timeout, root_dir)
     pass_dict[output_file] = ret_code
